@@ -29,8 +29,8 @@ meta <- read_csv("data/AM.MDM.data.cleaning.metrics.csv")
 #Counts of reads in genes(exons only)
 counts <- read_csv("data/AM.MDM.counts.paired.clean.csv")
 #Sample metadata extracted from sample ID in metrics file
-samp <- sampID %>% 
-  select(meta) %>% 
+samp <- meta %>% 
+  select(sampID) %>% 
   #Separate sampID into multiple columns
   separate(col = sampID, into = c("ptID", "cell", "TB"), sep="_",
            #Keep original sampID column

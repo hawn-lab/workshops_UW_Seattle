@@ -1,0 +1,46 @@
+---
+title: "Setup instructions"
+output:
+  html_document:
+    toc: yes
+  pdf_document:
+    toc: yes
+---
+You need to install and test R and RStudio before the workshop. The installation process is simple on all major platforms, and mostly consists of downloading and running the installers appropriate to your platform.
+
+## R and RStudio
+
+* [Install R](http://www.r-project.org), a free software environment for statistical computing and graphics.
+      + It is _highly recommended_ to install a precompiled binary distribution for your operating system -- use the links up at the top of the page linked to above!
+    + If you currently have R installed on your laptop, please make sure it is version 3.4.0 or later. *Please update if it is not!*
+* [Install RStudio](https://www.rstudio.com/products/rstudio/download/), a powerful user interface for R.
+
+## Testing testing
+
+1. Do whatever is appropriate for your OS to launch RStudio. You should get a window similar to the screenshot below.
+    +  If you don't see a window that is divided into distinct areas labelled "Console", "Environment", etc., you are probably running the user interface that comes bundled with R. Check that RStudio ![](images/RStudio_logo.png){width=0.4in} is present in your applications and start it instead.
+  
+  ![](images/rstudio.png){width=70%}
+  \ 
+  
+2. Put your cursor in the left pane labelled "Console", which is where you interact with the live R process. Create a simple object with code like `x <- 2 * 4` (followed by enter or return). In the "Environment" pane, to the right of the Console, you should see an entry for "x" with appropriate value (in this case, 8).
+  
+3. Then inspect the `x` object by typing `x` in the Console followed by enter or return. You should see the value 8 printed to the screen.
+
+4. Finally, check that plotting works. In the console, type `plot(cars)`. If you see a scatterplot appear in the "Plots" pane to the lower right,  you are good to go.
+
+## Further resources
+
+The above is sufficient preparation for this workship but here are some links if you are interested in reading a bit further.
+
+* How to Use RStudio:
+    - <https://support.rstudio.com/hc/en-us/sections/200107586-Using-RStudio>
+* RStudio Public Discussion & Troubleshooting Guide:
+    - <https://support.rstudio.com/hc/en-us/sections/203994097-RStudio-IDE>
+* How to Install R:
+    - <http://cran.r-project.org/doc/manuals/R-admin.html>
+    - <http://cran.stat.sfu.ca/doc/FAQ/R-FAQ.html#How-can-R-be-installed_003f>
+* R FAQ:
+    - <http://cran.r-project.org/doc/FAQ/R-FAQ.html>
+* More about add-on packages in the R Installation and Administration Manual
+     - <http://cran.r-project.org/doc/manuals/R-admin.html#Add_002don-packages>

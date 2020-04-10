@@ -1,0 +1,23 @@
+---
+title: "Suggested timeline"
+output:
+  html_document: default
+  pdf_document: default
+date: "version `r format(Sys.time(), '%B %d, %Y')`"
+subtitle: Git and GitHub workshop
+---
+
+* 10 min: Intro to reproducible research and version control
+* 10 min: Setup GitHub Desktop
+* 5 min: Init
+* 10 min: Add and commit
+* 10 min: Push
+* 15 min: Exercise
+
+* 5 min: Clone
+* 10 min: Fork
+* 10 min: No-conflict
+* 10 min: Conflict
+* 5 min: Continued collaboration and Git issues
+* 15 min: Exercise
+* 5 min: Limitations

@@ -1,0 +1,70 @@
+---
+title: "Git and GitHub"
+author: Kim Dill-McFarland <kadm@uw.edu>
+date: "version `r format(Sys.time(), '%B %d, %Y')`"
+output: ioslides_presentation
+urlcolor: blue
+editor_options: 
+  chunk_output_type: console
+---
+## Setup
+
+* Download and install git
+* Create a GitHub account
+* Download and install GitHub Desktop
+
+## Learning objectives
+
+* Describe the uses and importance of computational reproducibility
+* Define version control
+* Use Git to version control a text file on your computer
+* Use GitHub to share and collaborate on version controlled files
+
+# Reproduce<br><br>Replicate<br><br>Repeat
+
+## Computational reproducibility
+
+* "Lab" notebook
+* Defined environment
+* Open-source programs
+* Open-source code
+* Version control
+
+## Computational reproducibility
+
+* "Lab" notebook
+* Defined environment
+* Open-source programs
+* __Open-source code__ (GitHub)
+* __Version control__ (git)
+
+## Version control
+
+* Dated file names
+    - `myFile_2019.03.25.txt`
+    - `myFile_2019.06.12.txt`
+    
+<br>
+    
+* Versioned file names
+    - `myFile_v1.2.txt`
+    - `myFile_v1.3.txt`
+
+##
+
+<center><img src="images/phdcomics-final.png" height="600px" /></center>
+
+## Distributed version control (git)
+
+* time-stamped
+* commented
+* authored
+
+<br>
+
+>* fewer files
+* access to past versions
+* parallel versions
+* collaboration
+
+# Using Git and GitHub

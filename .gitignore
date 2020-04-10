@@ -37,3 +37,10 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+# MAC
+*.DS_Store
+
+# Unpub data files
+*AM.MDM.counts.paired.clean.csv
+*AM.MDM.data.cleaning.metrics.csv

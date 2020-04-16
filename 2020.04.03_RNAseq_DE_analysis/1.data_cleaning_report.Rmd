@@ -3,12 +3,12 @@ title: "RNA-seq of AM and MDM infected with TB"
 author: "Kim Dill-McFarland, kadm@uw.edu"
 date: "version `r format(Sys.time(), '%B %d, %Y')`"
 output:
-  pdf_document:
-    toc: yes
   html_document:
     toc: yes
     toc_float:
       collapsed: no
+  pdf_document:
+    toc: yes
 subtitle: Data cleaning
 editor_options:
   chunk_output_type: console
@@ -395,23 +395,14 @@ dat.AM.pc.abund.norm.voom <- voomWithQualityWeights(
 #### Filtering
 
 ```{r echo=FALSE}
-#Fancy table packages
-library(knitr)
-library(kableExtra)
-
 data.frame(
-  label = c("High median CV coverage",
-            "Low alignment percentage",
-            "Low total sequences",
-            "PCA outlier",
-            "Rare"),
+  label = c("High median CV coverage samples",
+            "Low alignment percentage samples",
+            "Low total sequences samples",
+            "PCA outlier samples",
+            "Rare genes"),
   value = c(0,0,0,0,
-        nrow(dat.AM.pc$genes)-nrow(dat.AM.pc.abund$genes))) %>% 
-kable(align="l", col.names = c("",""),
-        caption="AM data cleaning summary") %>% 
-  kable_styling(bootstrap_options = "striped", full_width = FALSE) %>% 
-  pack_rows("Samples removed", 1,4) %>% 
-  pack_rows("Genes removed", 5,5)
+        nrow(dat.AM.pc$genes)-nrow(dat.AM.pc.abund$genes)))
 ```
 
 #### PCA
@@ -628,23 +619,14 @@ dat.MDM.pc.abund.norm.voom <- voomWithQualityWeights(
 #### Filtering
 
 ```{r echo=FALSE}
-#Fancy table packages
-library(knitr)
-library(kableExtra)
-
 data.frame(
-  label = c("High median CV coverage",
-            "Low alignment percentage",
-            "Low total sequences",
-            "PCA outlier",
-            "Rare"),
+  label = c("High median CV coverage samples",
+            "Low alignment percentage samples",
+            "Low total sequences samples",
+            "PCA outlier samples",
+            "Rare genes"),
   value = c(0,0,0,0,
-        nrow(dat.MDM.pc$genes)-nrow(dat.MDM.pc.abund$genes))) %>% 
-kable(align="l", col.names = c("",""),
-        caption="MDM data cleaning summary") %>% 
-  kable_styling(bootstrap_options = "striped", full_width = FALSE) %>% 
-  pack_rows("Samples removed", 1,4) %>% 
-  pack_rows("Genes removed", 5,5)
+        nrow(dat.MDM.pc$genes)-nrow(dat.MDM.pc.abund$genes)))
 ```
 
 #### PCA

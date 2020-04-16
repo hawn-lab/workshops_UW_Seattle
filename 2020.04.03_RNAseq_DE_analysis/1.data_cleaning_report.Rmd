@@ -1,0 +1,711 @@
+---
+title: "RNA-seq of AM and MDM infected with TB"
+subtitle: "Data cleaning"
+author: "Kim Dill-McFarland, kadm@uw.edu"
+output:
+  html_document:
+    toc: yes
+    toc_float:
+      collapsed: no
+date: "version `r format(Sys.time(), '%B %d, %Y')`"
+editor_options: 
+  chunk_output_type: console
+---
+# Background
+
+Alveolar macrophages (AM) and monocyte-derived macrophages (MDM) were obtained from 6 donors and cultured with or without TB. 
+
+The purpose of this workflow is to complete basic data cleaning of metadata and RNA-seq libraries generated from the above experiments. This includes 1) removing low quality libraries, 2) removing outlying libraries, 3) filtering rare genes, and 4) normalizing for RNA composition and voom. 
+
+# Setup
+Load packages
+
+```{r setup, message=FALSE, warning=FALSE}
+# Data manipulation and figures
+library(tidyverse)
+  # Modify ggplot data order within facets
+  library(drlib)
+
+# Empirical analysis of digital gene expression data
+## Data normalization
+library(edgeR)
+ 
+#Create 'not in' operator
+`%notin%` <- Negate(`%in%`)
+```
+
+Set seed
+
+```{r}
+set.seed(927)
+```
+
+# Read in and format data 
+#### Cleaning metrics
+
+```{r}
+meta <- read_csv("data/AM.MDM.data.cleaning.metrics.csv")
+```
+
+#### Counts
+
+Incudes only exons.
+
+```{r}
+counts <- read_csv("data/AM.MDM.counts.paired.clean.csv")
+```
+
+#### Sample metadata
+
+Extracted from sample ID in metrics file. Other projects may have a separate table that needs to be loaded with a `read_` function.
+
+```{r}
+samp <- meta %>% 
+  select(sampID) %>% 
+  #Separate sampID into multiple columns
+  separate(col = sampID, into = c("ptID", "cell", "TB"), sep="_",
+           #Keep original sampID column
+           remove = FALSE) %>% 
+  #Modify ptID to remove leading "AM" text
+  mutate(ptID = gsub("AM", "", ptID))
+```
+
+## Summarize samples
+
+```{r echo=FALSE}
+samp %>% 
+  count(cell, TB)
+```
+
+# Data cleaning
+## Sample filtering
+### Assess median CV coverage vs. alignment percentage
+
+You want median CV coverage to be low, indicating similar coverage of all genes in a sample. You want high alignment percentage, indicating that the reads in a sample were high-quality and successfully aligned to the genome.
+
+```{r}
+#Plot the two metrics against each other
+meta %>% 
+  ggplot(aes(x=MEDIAN_CV_COVERAGE, y=PCT_PF_ALIGNED)) +
+  geom_point(size=2) +
+  theme_classic() +
+  #Force axes to go from 0 to 1
+  lims(x=c(0,1), y=c(0,1)) +
+  #Add horizontal/vertical lines at desired quality cutoffs
+  geom_hline(yintercept = 0.9) +
+  geom_vline(xintercept = 0.9)
+```
+
+### Assess total sequences
+
+Commonly, a minimum of 500,000 sequences (horizontal line below) is needed for reasonably coverage of the human genome.
+
+```{r}
+#Order by min to max sequences in each cell type
+meta %>% 
+  #Create samp variables for coloring plot
+  separate(col = sampID, into = c("ptID", "cell", "TB"), sep="_",
+           remove = FALSE) %>% 
+  
+  ggplot(aes(
+    #Order sampID (x axis) by the total seqs within each cell type
+    x=reorder_within(sampID,
+                     by=both.align.paired_filter.paired,
+                     within=cell), 
+    #Set y variable
+    y=both.align.paired_filter.paired,
+    #Fill bars by TB status
+    fill=TB)) +
+  #Column plot
+  geom_col() +
+  theme_classic() +
+  # Facet to separate cell types into 2 adjoining plots
+  # format y ~ x, columns ~ rows
+  facet_wrap(~cell, scales = "free_x") +
+  #Add cutoff line at 500,000
+  geom_hline(yintercept = 500000)
+```
+
+### Filter by quality
+
+These data are high-quality and no samples need to be removed. However, if this were not the case, we would use the 2 plots to define reasonable quality cutoffs and remove any samples that fail to meet those cutoffs. You need to do with before PCA assessment as poor-quality samples will impact PC calculations.
+
+### Assess PCA outliers
+
+An outlier is generally defined as a sample that is > 3 standard deviations away from the group mean on any PC axis. However, this is not a hard rule and generally, you can look at the PCA and easily ID potential outliers.
+
+```{r}
+PCA <- counts %>% 
+  #Put geneName column into rownames b/c prcomp does not allow non-numeric columns
+  column_to_rownames("geneName") %>% 
+  #Convert to log2 counts per million
+  cpm(log=TRUE) %>% 
+  #transpose table
+  t() %>% 
+  #Calculate the PCA
+  prcomp()
+
+#Extract the % variation explained by each axis
+summary(PCA)$importance
+
+#Extract PC values to use in plot 
+#For PCA$x to be a data frame so it can work with tidyverse functions
+PCA.dat <- as.data.frame(PCA$x) %>% 
+  #Take rownames and move to a data column named sampID
+  rownames_to_column("sampID") %>% 
+  #Merge with sample metadata, matching rows based on sampID
+  full_join(samp, by="sampID")
+
+PCA.dat %>% 
+  #Create color variable to show both cell type and TB status
+  mutate(color.var = paste(cell, TB, sep="_")) %>% 
+  
+  ggplot(aes(x=PC1,y=PC2, color=color.var)) +
+  geom_point(size=2) +
+  theme_classic() +
+  #Change axes labels
+  #Use importance info to label PCA
+  labs(x = "PC1 (33.839%)", y = "PC2 (14.957%)",
+       #Change legend label
+       color="")
+```
+
+### Filter outliers
+
+There are no outliers in these data. If there were, you would stepwise remove each outlier, starting with the furtherest, and assess PCA after each removal. Since PCA is relative to all samples in the data, this stepwise method is necessary as apparent outliers may disappear or new outliers may appear when a further outlier is removed.
+
+## Summarize sample filtering
+
+No samples were removed based on quality.
+
+## Separate cell types
+
+Since strong differences are apparent between cell types, gene filtering should be completed separately. This ensures that genes that are lowly abundant or rare in one cell type are not filtered in the other cell type where they are more abundant. Importantly, if our research question was to compare AM and MDM, they would need to be gene filtered together with different cutoffs that below. 
+
+Separate samples by cell type.
+
+```{r}
+#Filter sample metadata
+#List samples IDs in groups of interest
+AM.vec <- samp %>% 
+  filter(cell == "AM") %>% 
+  select(sampID) %>% 
+  unlist(use.names = FALSE)
+
+MDM.vec <- samp %>% 
+  filter(cell == "MDM") %>% 
+  select(sampID) %>% 
+  unlist(use.names = FALSE)
+
+#Select groups from count data
+counts.AM <- counts %>% 
+  select(geneName, all_of(AM.vec))
+
+counts.MDM <- counts %>% 
+  select(geneName, all_of(MDM.vec))
+```
+
+## Gene filtering - AM samples
+### Filter protein coding (pc) genes
+
+Load key and filter to pc genes with valid HGNC names.
+
+*Note that I've changed the separator used when combining the HGNC symbols. I found that a couple genes contain an "_" and thus, do not want to use this as a separator.*
+
+*Note that I also added a filter to keep only genes that are present in the count data. This removes the need to filter the key when we make the DGEList object next.*
+
+```{r}
+# Filtering to protein coding
+key <- read_tsv("data/EnsemblToHGNC_GRCh38.txt",
+                na=c(NA, "", ".", "N/A")) %>% 
+  filter(gene_biotype == "protein_coding" &
+           !is.na(hgnc_symbol)) %>% 
+  #remove duplicates if exist
+  distinct() %>% 
+  #Sort by name
+  rename(geneName = ensembl_gene_id) %>% 
+  arrange(geneName) %>% 
+  #Combine duplicate annotations
+  group_by(geneName, gene_biotype) %>% 
+  summarize(hgnc_symbol = paste(hgnc_symbol, collapse=":")) %>% 
+  #Keep only genes present in count data
+  filter(geneName %in% counts$geneName) %>% 
+  arrange(geneName)
+```
+
+View ENSEMBL IDs with multiple HGNC names.
+
+```{r}
+key %>% filter(grepl(":", hgnc_symbol))
+```
+
+Filter count table to protein coding genes.
+
+```{r}
+counts.AM.pc <- counts.AM %>% 
+  filter(geneName %in% key$geneName)
+```
+
+### Create DGEList object
+
+For use in gene filtering with edgeR
+
+```{r}
+dat.AM.pc <- DGEList(
+  #Move geneName data to rownames and convert to matrix
+  counts = as.matrix(column_to_rownames(counts.AM.pc, "geneName")),
+  #Filter to AM samples and convert to matrix
+  samples = as.matrix(filter(samp, cell == "AM")),
+  genes = key)
+```
+
+### Filter rare genes
+#### Assess mean-variance
+
+```{r}
+# Plot distribution of raw genes
+temp <- voomWithQualityWeights(
+  counts = dat.AM.pc,
+  design = model.matrix(~TB, data = dat.AM.pc$samples),
+  plot=FALSE, save.plot=TRUE
+)
+
+MV.plot1 <- data.frame(
+  x = temp$voom.xy$x,
+  y = temp$voom.xy$y,
+  linex = temp$voom.line$x,
+  liney = temp$voom.line$y) %>% 
+  
+  ggplot() +
+  geom_point(aes(x=x, y=y), size=0.5) +
+  geom_path(aes(x=linex, y=liney), color="red") +
+  theme_classic() +
+  labs(x="log2( count size + 0.5 )", y="Sqrt (stdev)",
+       title="Raw voomQW: Mean-variance trend")
+
+MV.plot1
+```
+
+The goal is to reduce the downward tail on the left of the plot. These genes are low mean abundance (x-axis) and low variance (y-axis). We want to remove these to:
+
+1. Reduce zeros in the data set
+2. Improve statistical power in later analyses as a result of fewer genes (= lower FDR penalty)
+
+You don't need to remove 100% of the tail. Instead, try a number of cutoffs until you reach a reasonable medium between data loss and quality of retained data.
+
+#### Filter with edgeR
+
+We won't use this function as I find it's too strict for simple experimental designs like the media vs. TB setup here. 
+
+Using `edgeR::filterByExpr( )`, you keep only non-rare genes that have:
+
+1. at least `min.count` reads scaled to counts per million of the median library size (k) in the number of samples equal to the smallest group of interest in the statistical model
+2. at least `min.total.count` total reads across all samples in the data
+
+Example with the default values.
+
+```{r eval=FALSE}
+#Determine abundant genes
+genes.to.keep <- filterByExpr(
+  dat.AM.pc,
+  design=model.matrix(~TB, data=dat.AM.pc$samples),
+  min.count=10,
+  min.total.count=15)
+
+# Filter data
+dat.AM.pc.abund2 <- dat.AM.pc[genes.to.keep,]
+```
+
+#### Filter by min count in min number of samples
+
+I developed a function that filters genes to those with `min.CPM` (counts per million) in at least `min.pct` (percent of samples) or `min.sample` (number of samples). It does not take the experimental design into account.
+
+```{r}
+#Get Kim's function from GitHub
+source("https://raw.githubusercontent.com/kdillmcfarland/R_bioinformatic_scripts/master/RNAseq_rare_gene_filter.R")
+
+#Filter
+rare.gene.filter(dat = dat.AM.pc,
+                 min.sample = 3,
+                 min.CPM = 0.5,
+                 name = "dat.AM.pc.abund")
+```
+
+#### Re-assess mean-variance
+
+The above filtering removed:
+
+```{r}
+#Total genes
+nrow(dat.AM.pc$genes)-nrow(dat.AM.pc.abund$genes)
+#Percent of genes
+(nrow(dat.AM.pc$genes)-nrow(dat.AM.pc.abund$genes))/nrow(dat.AM.pc$genes)*100
+```
+
+We look at the mean-variance again to see how the tail has changed.
+
+```{r}
+# Plot distribution of raw genes
+temp <- voomWithQualityWeights(
+  counts = dat.AM.pc.abund,
+  design = model.matrix(~TB, data = dat.AM.pc.abund$samples),
+  plot=FALSE, save.plot=TRUE
+)
+
+MV.plot2 <- data.frame(
+  x = temp$voom.xy$x,
+  y = temp$voom.xy$y,
+  linex = temp$voom.line$x,
+  liney = temp$voom.line$y) %>% 
+  
+  ggplot() +
+  geom_point(aes(x=x, y=y), size=0.5) +
+  geom_path(aes(x=linex, y=liney), color="red") +
+  theme_classic() +
+  labs(x="log2( count size + 0.5 )", y="Sqrt (stdev)",
+       title="Filtered voomQW: Mean-variance trend")
+
+#Plot the orig and filtered plots together
+library(cowplot)
+plot_grid(MV.plot1, MV.plot2)
+```
+
+### Normalize for RNA composition
+
+Calculate factors to scale library sizes.
+
+```{r norm2}
+dat.AM.pc.abund.norm <- calcNormFactors(dat.AM.pc.abund)
+```
+
+### Normalize with voom
+
+Allow the voomQW function to plot the default plot instead of our.
+
+```{r}
+dat.AM.pc.abund.norm.voom <- voomWithQualityWeights(
+  dat.AM.pc.abund.norm,
+  design=model.matrix(~TB, data = dat.AM.pc.abund.norm$samples),
+  plot=TRUE)
+```
+
+### Summarize AM cleaning
+#### Filtering
+
+```{r echo=FALSE}
+#Fancy table packages
+library(knitr)
+library(kableExtra)
+
+data.frame(
+  label = c("High median CV coverage",
+            "Low alignment percentage",
+            "Low total sequences",
+            "PCA outlier",
+            "Rare"),
+  value = c(0,0,0,0,
+        nrow(dat.AM.pc$genes)-nrow(dat.AM.pc.abund$genes))) %>% 
+kable(align="l", col.names = c("",""),
+        caption="AM data cleaning summary") %>% 
+  kable_styling(bootstrap_options = "striped", full_width = FALSE) %>% 
+  pack_rows("Samples removed", 1,4) %>% 
+  pack_rows("Genes removed", 5,5)
+```
+
+#### PCA
+
+```{r PCA.final2, echo=FALSE, warning=FALSE, fig.width=8.5}
+#Calculate PCA for voom norm data.
+PCA.voom <- as.data.frame(dat.AM.pc.abund.norm.voom$E) %>% 
+  t() %>% 
+  #Calc PCA
+  prcomp()
+
+PC1.label <- paste("PC1 (", summary(PCA.voom)$importance[2,1]*100, "%)", sep="")
+PC2.label <-paste("PC2 (", summary(PCA.voom)$importance[2,2]*100, "%)", sep="")
+
+# Extract PC values
+PCA.voom.dat <- as.data.frame(PCA.voom$x) %>% 
+  rownames_to_column("sampID") %>%
+  # Merge with metadata
+  full_join(as.data.frame(dat.AM.pc.abund.norm.voom$targets),
+            by="sampID")
+
+PCA1 <- ggplot(PCA.voom.dat, aes(PC1, PC2)) +
+           geom_point(aes(color=TB),size=3) + 
+  #Beautify
+  theme_classic() +
+  theme(legend.title = element_blank(),
+        legend.position = "bottom") +
+  labs(x=PC1.label, y=PC2.label, title="Voom normalized log2 CPM") +
+  coord_fixed(ratio=1)
+
+PCA2 <- ggplot(PCA.voom.dat, aes(PC1, PC2)) +
+           geom_point(aes(color=ptID),size=3) + 
+  #Beautify
+  theme_classic() +
+  theme(legend.title = element_blank(),
+        legend.position = "bottom") +
+  labs(x=PC1.label, y=PC2.label, title="Voom normalized log2 CPM") +
+  coord_fixed(ratio=1)
+
+plot_grid(PCA1, PCA2, ncol=2, align="hv")
+```
+
+#### Save AM data
+
+Write as a single RData to easily load everything into R.
+
+```{r}
+save(dat.AM.pc.abund.norm.voom,
+     file="data/AM.clean.RData")
+```
+
+Write counts as table for use in other programs.
+
+```{r}
+write_csv(
+  as.data.frame(dat.AM.pc.abund.norm.voom$E),
+  path = "data/AM.clean.counts.csv")
+```
+
+## Gene filtering - MDM samples
+### Filter protein coding (pc) genes
+
+Use same key as MDM samples. Filter count table to protein coding genes.
+
+```{r}
+counts.MDM.pc <- counts.MDM %>% 
+  filter(geneName %in% key$geneName)
+```
+
+### Create DGEList object
+
+For use in gene filtering with edgeR
+
+```{r}
+dat.MDM.pc <- DGEList(
+  #Move geneName data to rownames and convert to matrix
+  counts = as.matrix(column_to_rownames(counts.MDM.pc, "geneName")),
+  #Filter to MDM samples and convert to matrix
+  samples = as.matrix(filter(samp, cell == "MDM")),
+  genes = key)
+```
+
+### Filter rare genes
+#### Assess mean-variance
+
+```{r}
+# Plot distribution of raw genes
+temp <- voomWithQualityWeights(
+  counts = dat.MDM.pc,
+  design = model.matrix(~TB, data = dat.MDM.pc$samples),
+  plot=FALSE, save.plot=TRUE
+)
+
+MV.plot1 <- data.frame(
+  x = temp$voom.xy$x,
+  y = temp$voom.xy$y,
+  linex = temp$voom.line$x,
+  liney = temp$voom.line$y) %>% 
+  
+  ggplot() +
+  geom_point(aes(x=x, y=y), size=0.5) +
+  geom_path(aes(x=linex, y=liney), color="red") +
+  theme_classic() +
+  labs(x="log2( count size + 0.5 )", y="Sqrt (stdev)",
+       title="Raw voomQW: Mean-variance trend")
+
+MV.plot1
+```
+
+The goal is to reduce the downward tail on the left of the plot. These genes are low mean abundance (x-axis) and low variance (y-axis). We want to remove these to:
+
+1. Reduce zeros in the data set
+2. Improve statistical power in later analyses as a result of fewer genes (= lower FDR penalty)
+
+You don't need to remove 100% of the tail. Instead, try a number of cutoffs until you reach a reasonable medium between data loss and quality of retained data.
+
+#### Filter with edgeR
+
+We won't use this function as I find it's too strict for simple experimental designs like the media vs. TB setup here. 
+
+Using `edgeR::filterByExpr( )`, you keep only non-rare genes that have:
+
+1. at least `min.count` reads scaled to counts per million of the median library size (k) in the number of samples equal to the smallest group of interest in the statistical model
+2. at least `min.total.count` total reads across all samples in the data
+
+Example with the default values.
+
+```{r eval=FALSE}
+#Determine abundant genes
+genes.to.keep <- filterByExpr(
+  dat.MDM.pc,
+  design=model.matrix(~TB, data=dat.MDM.pc$samples),
+  min.count=10,
+  min.total.count=15)
+
+# Filter data
+dat.MDM.pc.abund2 <- dat.MDM.pc[genes.to.keep,]
+```
+
+#### Filter by min count in min number of samples
+
+I developed a function that filters genes to those with `min.CPM` (counts per million) in at least `min.pct` (percent of samples) or `min.sample` (number of samples). It does not take the experimental design into account.
+
+```{r}
+#Get Kim's function from GitHub
+source("https://raw.githubusercontent.com/kdillmcfarland/R_bioinformatic_scripts/master/RNAseq_rare_gene_filter.R")
+
+#Filter
+rare.gene.filter(dat = dat.MDM.pc,
+                 min.sample = 3,
+                 min.CPM = 0.5,
+                 name = "dat.MDM.pc.abund")
+```
+
+#### Re-assess mean-variance
+
+The above filtering removed:
+
+```{r}
+#Total genes
+nrow(dat.MDM.pc$genes)-nrow(dat.MDM.pc.abund$genes)
+#Percent of genes
+(nrow(dat.MDM.pc$genes)-nrow(dat.MDM.pc.abund$genes))/nrow(dat.MDM.pc$genes)*100
+```
+
+We look at the mean-variance again to see how the tail has changed.
+
+```{r}
+# Plot distribution of raw genes
+temp <- voomWithQualityWeights(
+  counts = dat.MDM.pc.abund,
+  design = model.matrix(~TB, data = dat.MDM.pc.abund$samples),
+  plot=FALSE, save.plot=TRUE
+)
+
+MV.plot2 <- data.frame(
+  x = temp$voom.xy$x,
+  y = temp$voom.xy$y,
+  linex = temp$voom.line$x,
+  liney = temp$voom.line$y) %>% 
+  
+  ggplot() +
+  geom_point(aes(x=x, y=y), size=0.5) +
+  geom_path(aes(x=linex, y=liney), color="red") +
+  theme_classic() +
+  labs(x="log2( count size + 0.5 )", y="Sqrt (stdev)",
+       title="Filtered voomQW: Mean-variance trend")
+
+#Plot the orig and filtered plots together
+library(cowplot)
+plot_grid(MV.plot1, MV.plot2)
+```
+
+### Normalize for RNA composition
+
+Calculate factors to scale library sizes.
+
+```{r norm}
+dat.MDM.pc.abund.norm <- calcNormFactors(dat.MDM.pc.abund)
+```
+
+### Normalize with voom
+
+Allow the voomQW function to plot the default plot instead of our.
+
+```{r}
+dat.MDM.pc.abund.norm.voom <- voomWithQualityWeights(
+  dat.MDM.pc.abund.norm,
+  design=model.matrix(~TB, data = dat.MDM.pc.abund.norm$samples),
+  plot=TRUE)
+```
+
+### Summarize MDM cleaning
+#### Filtering
+
+```{r echo=FALSE}
+#Fancy table packages
+library(knitr)
+library(kableExtra)
+
+data.frame(
+  label = c("High median CV coverage",
+            "Low alignment percentage",
+            "Low total sequences",
+            "PCA outlier",
+            "Rare"),
+  value = c(0,0,0,0,
+        nrow(dat.MDM.pc$genes)-nrow(dat.MDM.pc.abund$genes))) %>% 
+kable(align="l", col.names = c("",""),
+        caption="MDM data cleaning summary") %>% 
+  kable_styling(bootstrap_options = "striped", full_width = FALSE) %>% 
+  pack_rows("Samples removed", 1,4) %>% 
+  pack_rows("Genes removed", 5,5)
+```
+
+#### PCA
+
+```{r PCA.final, echo=FALSE, warning=FALSE, fig.width=8.5}
+#Calculate PCA for voom norm data.
+PCA.voom <- as.data.frame(dat.MDM.pc.abund.norm.voom$E) %>% 
+  t() %>% 
+  #Calc PCA
+  prcomp()
+
+PC1.label <- paste("PC1 (", summary(PCA.voom)$importance[2,1]*100, "%)", sep="")
+PC2.label <-paste("PC2 (", summary(PCA.voom)$importance[2,2]*100, "%)", sep="")
+
+# Extract PC values
+PCA.voom.dat <- as.data.frame(PCA.voom$x) %>% 
+  rownames_to_column("sampID") %>%
+  # Merge with metadata
+  full_join(as.data.frame(dat.MDM.pc.abund.norm.voom$targets),
+            by="sampID")
+
+PCA1 <- ggplot(PCA.voom.dat, aes(PC1, PC2)) +
+           geom_point(aes(color=TB),size=3) + 
+  #Beautify
+  theme_classic() +
+  theme(legend.title = element_blank(),
+        legend.position = "bottom") +
+  labs(x=PC1.label, y=PC2.label, title="Voom normalized log2 CPM") +
+  coord_fixed(ratio=1)
+
+PCA2 <- ggplot(PCA.voom.dat, aes(PC1, PC2)) +
+           geom_point(aes(color=ptID),size=3) + 
+  #Beautify
+  theme_classic() +
+  theme(legend.title = element_blank(),
+        legend.position = "bottom") +
+  labs(x=PC1.label, y=PC2.label, title="Voom normalized log2 CPM") +
+  coord_fixed(ratio=1)
+
+plot_grid(PCA1, PCA2, ncol=2, align="hv")
+```
+
+#### Save MDM data
+
+Write as a single RData to easily load everything into R.
+
+```{r}
+save(dat.MDM.pc.abund.norm.voom,
+     file="data/MDM.clean.RData")
+```
+
+Write counts as table for use in other programs.
+
+```{r}
+write_csv(
+  as.data.frame(dat.MDM.pc.abund.norm.voom$E),
+  path = "data/MDM.clean.counts.csv")
+```
+
+# R session
+
+```{r}
+sessionInfo()
+```
+
+***

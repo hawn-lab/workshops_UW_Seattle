@@ -44,3 +44,7 @@ vignettes/*.pdf
 # Unpub data files
 *AM.MDM.counts.paired.clean.csv
 *AM.MDM.data.cleaning.metrics.csv
+2020.04.03_RNAseq_DE_analysis/data/AM.clean.counts.csv
+2020.04.03_RNAseq_DE_analysis/data/AM.clean.RData
+2020.04.03_RNAseq_DE_analysis/data/MDM.clean.RData
+2020.04.03_RNAseq_DE_analysis/data/MDM.clean.counts.csv

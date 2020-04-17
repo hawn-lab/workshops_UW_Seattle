@@ -1,0 +1,413 @@
+---
+title: "RNA-seq of AM and MDM infected with TB"
+author: "Kim Dill-McFarland, kadm@uw.edu"
+date: "version `r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:
+    toc: yes
+    toc_float:
+      collapsed: no
+  pdf_document:
+    toc: yes
+subtitle: Data cleaning
+editor_options:
+  chunk_output_type: console
+---
+# Background
+
+Alveolar macrophages (AM) and monocyte-derived macrophages (MDM) were obtained from 6 donors and cultured with or without TB. 
+
+The purpose of this workflow is determine differentially expressed genes in response to TB. These genes are then grouped into modules.
+
+# Setup
+Load packages
+
+```{r setup, message=FALSE, warning=FALSE}
+# Data manipulation and figures
+library(tidyverse)
+
+# Linear models for RNAseq
+library(limma)
+
+#Module building
+library(WGCNA)
+```
+
+Set seed
+
+```{r}
+set.seed(927)
+```
+
+# AM samples
+## Load data
+
+```{r}
+load("data/AM.clean.RData")
+```
+
+## Differentially expressed genes
+### Linear model
+
+*Pipeline*
+
+1. Make a model
+2. Group by donor (if needed)
+3. Fit model
+4. Estimate P-values
+
+#### Fit linear model 
+
+```{r}
+# Make model
+model <- model.matrix(~TB, data = dat.AM.pc.abund.norm.voom$targets)
+colnames(model) <- c("(Intercept)", "TB")
+
+# Group by donor
+# similar to repeated measure
+# Calculate how correlated samples from the same donor are
+consensus.corr <- duplicateCorrelation(
+  object = dat.AM.pc.abund.norm.voom$E,
+  block = dat.AM.pc.abund.norm.voom$targets$ptID,
+  design = model)
+
+consensus.corr$consensus.correlation
+
+# Fit model with limma
+fit <- lmFit(
+  object = dat.AM.pc.abund.norm.voom$E,
+  design = model,
+  block = dat.AM.pc.abund.norm.voom$targets$ptID,
+  correlation = consensus.corr$consensus.correlation)
+
+# Empirical Bayes and P-Val estimation
+efit <- eBayes(fit)
+```
+
+#### Extract results
+
+```{r}
+source("https://raw.githubusercontent.com/kdillmcfarland/R_bioinformatic_scripts/master/limma.extract.pval.R")
+
+extract.pval(model = model,
+             voom.dat = dat.AM.pc.abund.norm.voom$E,
+             eFit = efit,
+             name = "AM_gene_pval",
+             summary = TRUE)
+
+#Save to disk
+dir.create("results/gene_level", showWarnings = FALSE)
+write_csv(AM_gene_pval,
+  "results/gene_level/AM_gene_pval.csv")
+```
+
+### Summary DE genes
+
+```{r}
+AM_gene_pval.summ %>% 
+  filter(group=="TB")
+```
+
+```{r}
+#volcano plot
+AM_gene_pval %>% 
+  filter(group == "TB") %>% 
+  mutate(signif.group = ifelse(adj.P.Val <= 0.05 & 
+                                 FC.group == "up",
+                               "up",
+                               ifelse(adj.P.Val <= 0.05 & 
+                                        FC.group == "down",
+                                      "down",
+                                      "NS"))) %>% 
+  
+  ggplot(aes(x = logFC, y = -log10(adj.P.Val))) +
+  geom_point(aes(color = signif.group)) +
+  theme_classic() +
+  scale_color_manual(values = c("blue", "grey", "red")) +
+  geom_hline(yintercept = -log10(0.05)) +
+  lims(x = c(-10.5,10.5)) +
+  labs(x = "Log2 fold change", y = "-log10( FDR )",
+       color = "Significance")
+```
+
+## Differentially expressed modules
+### Weighted correlation network analysis (WGCNA)
+
+More info at <https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-9-559>
+
+#### Make modules
+
+```{r}
+# List signif genes
+genes.signif <- AM_gene_pval %>% 
+  filter(adj.P.Val <= 0.05 & group == "TB") %>% 
+  select(geneName) %>% unlist(use.names = FALSE)
+
+# Run clustering
+# use blockwiseModules( )
+# Actually use Kim's function
+source("https://raw.githubusercontent.com/kdillmcfarland/R_bioinformatic_scripts/master/RNAseq_module_fxn.R")
+
+make.modules(voom.dat = dat.AM.pc.abund.norm.voom,
+             genes.signif = genes.signif,
+             Rsq.min = 0.8,
+             minModuleSize = 50,
+             deepSplit = 3,
+             nThread = 3,
+             basename = "AM")
+```
+
+Load results that were saved to the disk.
+
+```{r}
+#Genes in modules
+AM_mods.net <- read_csv(
+  "results/module_AM_deepSplit3_minMod50/AM_genes_in_mod.csv")
+
+#MEAN counts of genes in modules, NOT sum
+AM_mods.voom <- read_csv(
+  "results/module_AM_deepSplit3_minMod50/AM_mod_voom_counts.csv")
+```
+
+#### Summary modules
+
+```{r}
+AM_mods.net %>% 
+  count(module.char)
+```
+
+### Linear model
+
+#### Fit linear model
+
+```{r}
+#Make model
+# Use same as for genes
+
+# Group by donor
+# similar to repeated measure
+# Calculate how correlated samples from the same donor are
+consensus.corr.mods <- duplicateCorrelation(
+  object = column_to_rownames(AM_mods.voom, "module"),
+  block = dat.AM.pc.abund.norm.voom$targets$ptID,
+  design = model)
+
+consensus.corr.mods$consensus.correlation
+
+# Fit model with limma
+fit <- lmFit(
+  object = column_to_rownames(AM_mods.voom, "module"),
+  design = model,
+  block = dat.AM.pc.abund.norm.voom$targets$ptID,
+  correlation = consensus.corr.mods$consensus.correlation)
+
+# Empirical Bayes and P-Val estimation
+efit <- eBayes(fit)
+```
+
+#### Extract results
+
+```{r}
+# Extract P-val
+extract.pval(model = model,
+             voom.dat = column_to_rownames(AM_mods.voom, "module"),
+             eFit = efit,
+             name = "AM_module_pval",
+             summary = TRUE)
+```
+
+### Summary DE modules
+
+```{r}
+AM_module_pval.summ
+```
+
+# MDM samples
+## Load data
+
+```{r}
+load("data/MDM.clean.RData")
+```
+
+## Differentially expressed genes
+### Linear model
+
+*Pipeline*
+
+1. Make a model
+2. Group by donor (if needed)
+3. Fit model
+4. Estimate P-values
+
+#### Fit linear model 
+
+```{r}
+# Make model
+model <- model.matrix(~TB, 
+                      data = dat.MDM.pc.abund.norm.voom$targets)
+colnames(model) <- c("(Intercept)", "TB")
+
+# Group by donor
+# similar to repeated measure
+# Calculate how correlated samples from the same donor are
+consensus.corr <- duplicateCorrelation(
+  object = dat.MDM.pc.abund.norm.voom$E,
+  block = dat.MDM.pc.abund.norm.voom$targets$ptID,
+  design = model)
+
+consensus.corr$consensus.correlation
+
+# Fit model with limma
+fit <- lmFit(
+  object = dat.MDM.pc.abund.norm.voom$E,
+  design = model,
+  block = dat.MDM.pc.abund.norm.voom$targets$ptID,
+  correlation = consensus.corr$consensus.correlation)
+
+# Empirical Bayes and P-Val estimation
+efit <- eBayes(fit)
+```
+
+#### Extract results
+
+```{r}
+source("https://raw.githubusercontent.com/kdillmcfarland/R_bioinformatic_scripts/master/limma.extract.pval.R")
+
+extract.pval(model = model,
+             voom.dat = dat.MDM.pc.abund.norm.voom$E,
+             eFit = efit,
+             name = "MDM_gene_pval",
+             summary = TRUE)
+
+#Save to disk
+dir.create("results/gene_level", showWarnings = FALSE)
+write_csv(MDM_gene_pval,
+          "results/gene_level/MDM_gene_pval.csv")
+```
+
+### Summary DE genes
+
+```{r}
+MDM_gene_pval.summ %>% 
+  filter(group=="TB")
+```
+
+```{r}
+#volcano plot
+MDM_gene_pval %>% 
+  filter(group == "TB") %>% 
+  mutate(signif.group = ifelse(adj.P.Val <= 0.05 & 
+                                 FC.group == "up",
+                               "up",
+                               ifelse(adj.P.Val <= 0.05 & 
+                                        FC.group == "down",
+                                      "down",
+                                      "NS"))) %>% 
+  
+  ggplot(aes(x = logFC, y = -log10(adj.P.Val))) +
+  geom_point(aes(color = signif.group)) +
+  theme_classic() +
+  scale_color_manual(values = c("blue", "grey", "red")) +
+  geom_hline(yintercept = -log10(0.05)) +
+  lims(x = c(-12,12)) +
+  labs(x = "Log2 fold change", y = "-log10( FDR )",
+       color = "Significance")
+```
+
+## Differentially expressed modules
+### Weighted correlation network analysis (WGCNA)
+
+More info at <https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-9-559>
+
+#### Make modules
+
+```{r}
+# List signif genes
+genes.signif <- MDM_gene_pval %>% 
+  filter(adj.P.Val <= 0.1 & group == "TB") %>% 
+  select(geneName) %>% unlist(use.names = FALSE)
+
+# Run clustering
+# use blockwiseModules( )
+# Actually use Kim's function
+source("https://raw.githubusercontent.com/kdillmcfarland/R_bioinformatic_scripts/master/RNAseq_module_fxn.R")
+
+make.modules(voom.dat = dat.MDM.pc.abund.norm.voom,
+             genes.signif = genes.signif,
+             Rsq.min = 0.79,
+             minModuleSize = 50,
+             deepSplit = 3,
+             nThread = 3,
+             basename = "MDM")
+```
+
+Load results that were saved to the disk.
+
+```{r}
+#Genes in modules
+MDM_mods.net <- read_csv("results/module_MDM_deepSplit3_minMod50/MDM_genes_in_mod.csv")
+
+#MEAN counts of genes in modules, NOT sum
+MDM_mods.voom <- read_csv("results/module_MDM_deepSplit3_minMod50/MDM_mod_voom_counts.csv")
+```
+
+#### Summary modules
+
+```{r}
+MDM_mods.net %>% 
+  count(module.char)
+```
+
+### Linear model
+
+#### Fit linear model
+
+```{r}
+#Make model
+# Use same as for genes
+
+# Group by donor
+# similar to repeated measure
+# Calculate how correlated samples from the same donor are
+consensus.corr.mods <- duplicateCorrelation(
+  object = column_to_rownames(MDM_mods.voom, "module"),
+  block = dat.MDM.pc.abund.norm.voom$targets$ptID,
+  design = model)
+
+consensus.corr.mods$consensus.correlation
+
+# Fit model with limma
+fit <- lmFit(
+  object = column_to_rownames(MDM_mods.voom, "module"),
+  design = model,
+  block = dat.MDM.pc.abund.norm.voom$targets$ptID,
+  correlation = consensus.corr.mods$consensus.correlation)
+
+# Empirical Bayes and P-Val estimation
+efit <- eBayes(fit)
+```
+
+#### Extract results
+
+```{r}
+# Extract P-val
+extract.pval(model = model,
+             voom.dat = column_to_rownames(MDM_mods.voom, "module"),
+             eFit = efit,
+             name = "MDM_module_pval",
+             summary = TRUE)
+```
+
+### Summary DE modules
+
+```{r}
+MDM_module_pval.summ
+```
+
+# R session
+
+```{r}
+sessionInfo()
+```
+
+***

@@ -1,0 +1,116 @@
+# Discussion on model building
+##############################
+# General outline
+
+1. Assess your data, question, and hypothesis
+2. Build a model
+3. Assess goodness of fit
+4. Add/remove variables and assess if this improved the fit
+5. Repeat until you have your final model
+
+##############################
+# How to build a model
+## Assess your data
+
+Regardless of what model building approach you take, it is always a good idea to do some data exploration prior to fitting any model. This could include things like:
+
+* Consider biological significance and norms
+    - What is your question and hypothesis?
+    - What is already known?
+    - What are common co-variates for these types of data?
+    
+* Plot variables alone
+    - What is your sample size? What is the distribution? Is there enough power and variance for it to be useful?
+    - Is it normally distributed?
+    - Do you need to perform any transformations (like log) to improve linearity or normalcy?
+    - Are there any outliers?
+    - Are there subsets that are so different that you should consider splitting the data? Or re-coding a numeric variable to groups like high/low?
+    
+* Plot outcome (y-variable) against potential predictors (x-variables)
+    - Do they appear to be correlated? If so, is it linear? Log? etc.. This could inform what kind of model you try first
+    
+* Plot predictors against each other (and if relevant, outcomes against each other)
+    - Are they correlated? This could mean you will only include one from each correlated group in the model, because correlated predictors can result in collinearity which can cause model fitting to be poor or even fail
+    - <https://en.wikipedia.org/wiki/Multicollinearity> 
+
+## The first model
+
+* Consider if you have a blocked design or repeated measure
+* What is your predictor(s) of interest?
+* What are potential co-variates (fixed effects)?
+* What are potential random effects?
+
+Some helpful info on fixed vs random effects
+
+* <https://dynamicecology.wordpress.com/2015/11/04/is-it-a-fixed-or-random-effect/>
+* <https://www.meta-analysis.com/downloads/Meta-analysis%20Fixed-effect%20vs%20Random-effects%20models.pdf>
+
+## Step-up approach
+
+1. Assess the data as described above
+2. Build model with top 2-3 variables (those best suited to answer your question, have sufficient variance, are not strongly correlated, etc.)
+3. Assess fit of model
+    - if fit okay, add next best variable and re-assess
+    - if fit bad, start over at 1 and try a different set of starting variables
+4. Repeat, keeping only variables that improve the model
+
+## Step-down approach
+
+1. Assess the data as described above
+    - Focus on reducing the list of potential predictors if you have a lot
+2. Create model of all variables that pass step 1
+    - Consider your number of predictors vs sample sizes like the 1 to 10 rule <https://en.wikipedia.org/wiki/One_in_ten_rule>
+3. Remove the least significant, most complex interaction term
+    - for example, a nonsignificant interaction term should be removed before a nonsignificant main term
+4. Re-run model minus the 1 variable
+5. Repeat 3-4 until only significant variables remain
+    - Generally, you must keep all main terms that contribute to a significant interaction. For example, is A:B is significant but A alone is not, A still needs to remain in the model
+
+## Interaction terms
+
+* Only include those with biological relevance / those you have a specific hypothesis about
+* Always consider interpretation. What would it mean if the interaction was significant? What about a triple interaction mean?
+
+##############################
+# Assess a model
+
+* Heteroscedasticity <https://en.wikipedia.org/wiki/Heteroscedasticity>
+* `plot( )` function on a model in R to look at residuals and normal Q-Q
+* As we discuss in the video, assessing a model on its own it not as robust a process as comparing two models (discussed next). You will never know if you've found the "best model" for your data. Instead focus on making sure the model is not wildly off (like fitting a linear line to a clearly log trend) and then progress to model comparisons to try to improve on wherever you've started
+* Sometimes you have no choice. In a step-up approach, you could start with the variable(s) that are intrinsically part of your experiment (like +/- Mtb). These *have* to be in the model so you can immediately progress to comparing models regardless if the starting model is any good.
+
+##############################
+# Compare models
+
+* AIC/BIC - numeric value that summarizes the goodness of fit
+    - checkout lme4 package for functions in R
+    - Values are meaningless in isolation. Meant to compare models where a smaller value is a better fitting model
+    - BIC more heavily penalizes more complex models
+    - relative to sample size. More complex models are less heavily penalized when you have a large sample size
+    - <https://en.wikipedia.org/wiki/Akaike_information_criterion>
+    - <https://en.wikipedia.org/wiki/Bayesian_information_criterion>
+* Plot residuals against each other
+    - If you have lots of outcomes (like genes), does one model have lower residuals for most of the outcomes?
+* ANOVA of two models to test is residuals are significantly different `anova( )`
+
+##############################
+# Other thoughts
+## So you have a lot of predictors / independent variables...
+
+how do you pick those to include?
+
+* biological interest/significance
+* targeted hypothesis testing
+* dimensionality reduction (PC)
+    - including PCs as a pseudo-variable to explain multiple other variables
+* ease of measuring in follow-up experiments
+
+* LASSO or decision tree methods
+    - however, cannot deal with highly correlated predictors
+    
+## So you have a lot of outcomes / dependent variables...
+
+* biological significance and logistics
+    - If you want to predict the outcome, consider what you can measure (cost, ease) vs the outcome
+* running independent models with different y and FDR correct P-values (for example, limma)
+

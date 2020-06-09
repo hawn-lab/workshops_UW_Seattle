@@ -1,0 +1,125 @@
+---
+title: "Example Rmarkdown"
+subtitle: "Subtitle"
+author: "Kim"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 2
+    toc_float:
+      collapsed: no
+editor_options: 
+  chunk_output_type: console
+---
+
+# Font customization
+## Bold, italic, scripts
+
+Some *italic* text vs some **bold** text
+
+Some _italic_ vs __bold__
+
+superscript^2^ or subscript~2~ ~etc~
+
+~~strikethrough~~
+
+`looks like code`
+
+## Vertical spacing
+
+#### Good for wrapping text format
+
+This is separated  by double spaces while this is separated
+by 1 hard return and this is  
+by double spaces and 1 hard return and this
+
+by 2 hard returns
+
+#### Good for standard, not wrapping text format
+
+you may write code like
+this so you can view it on a
+skinny screen
+
+#### Large vertical space
+
+<br>
+<br>
+<br>
+
+## Links
+
+To website: [link text](www.rstudio.com)
+
+To images on your computer: ![caption](UW_med.logo.png)
+
+To images on website: ![caption](https://resize.hswstatic.com/w_907/gif/penguins-1.jpg)
+
+## Lists
+
+* unordered list
+* item 2
+    - sub1
+        + subsub1
+    
+1. ordered list
+1. item 1b
+    + sub1
+2. item 2
+
+## Formulae
+
+Inline formula $a_1 + a^2 +a_1^2$ text continues
+
+New line formula $$a_1 + a^2 +a_1^2$$ text continues
+
+http://csrgxtu.github.io/2015/03/20/Writing-Mathematic-Fomulars-in-Markdown/  
+https://www.calvin.edu/~rpruim/courses/s341/S17/from-class/MathinRmd.html
+
+# Using code in Rmd
+
+Desc of what this chunk does
+
+```{r plot, echo=FALSE}
+#This is an R script
+plot(cars)
+```
+
+```{bash, bash.ex}
+pwd
+ls
+```
+
+## Setup
+
+```{r setup, include=FALSE}
+library(tidyverse)
+```
+
+```{r eval=FALSE}
+x + y = z
+where z is length
+```
+
+## Customize chunk options
+
+https://yihui.org/knitr/options/
+
+* echo: show code or not
+* include: show anything or not
+* eval: run the code or not
+
+## In line code
+
+The mean speed of cars is `r mean(cars$speed)` mph.
+
+# Cheatsheet
+
+Under Help > Cheatsheets
+
+# R session
+
+```{r}
+sessionInfo()
+```

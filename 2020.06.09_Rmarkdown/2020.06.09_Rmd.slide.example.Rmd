@@ -1,0 +1,47 @@
+---
+title: "Untitled"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# Single header
+## Double header
+### Triple header
+
+This is an R Markdown presentation. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
+
+## Slide with Bullets
+
+- Bullet 1
+- Bullet 2
+- Bullet 3
+
+## Slide with R Output
+
+```{r cars, echo = TRUE}
+summary(cars)
+```
+
+## Slide with Plot
+
+```{r pressure}
+plot(pressure)
+```
+
+## Divided slide
+
+<div style="float: left; width: 50%; text-align:center;">
+![caption](https://resize.hswstatic.com/w_907/gif/penguins-1.jpg){width=100%}
+</div>
+
+<div style="float: left; width: 50%; text-align:left;">
+
+- Penguins are cool
+- Penguins are birds
+
+</div>

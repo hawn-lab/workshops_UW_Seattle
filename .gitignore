@@ -48,3 +48,6 @@ vignettes/*.pdf
 2020.04.03_RNAseq_DE_analysis/data/AM.clean.RData
 2020.04.03_RNAseq_DE_analysis/data/MDM.clean.RData
 2020.04.03_RNAseq_DE_analysis/data/MDM.clean.counts.csv
+2020.07.01_IntroR/data/Hawn_RSTR_PRKAG2_genotype.csv
+2020.07.01_IntroR/data/Hawn_RSTR_PRKAG2_SNPinfo.csv
+2020.07.01_IntroR/data/RSTR_RNAseq_dat.voom.RData

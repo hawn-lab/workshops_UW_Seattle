@@ -4,28 +4,25 @@ Files associated with data science workshops at the U. of Washington-Seattle
 
 # This week
 
-#### Tuesday June 30, 2-3:30PM
+#### Tuesday July 7, 2-3:30PM
 
-* Creating efficient functions in R
-  - Presentation (Kim): Best practices for creating your own functions
-  - Discussion: How to make your functions fast(er)
+* Imputation and NA-inflated (aka sparse) data
+  - When is imputation needed? 
+  - What do you need in order to get valid imputation values?
+  - Applications in proteomics
+  - What are alternatives to imputation for sparse data?
 
-**Prior to attending** please spend ~1 hr thinking about / researching one or more of the following topics. Our dicussion will draw on the different resources everyone has gathered.
-
-* When and why should you create a function? Feel free to use examples specific to your projects
-* When and why should you bundle your functions into a package?
-* Alternatives to `for` loops
-* Examples of good and bad functions
+**Prior to attending** please find 1 article / workflow / tutorial related to the topic and be ready to discuss.
 
 # Up-coming topics
 
-* 2020.07.07: LDheatmap
-* 2020.07.14: Imputation and NA-inflated data
+* 2020.07.14: LDheatmap
 * 2020.07.21: Code review of mediation script
 * 2020.07.28: TBD
 
 # Past workshops
 
+* 2020.06.30: Best practices for custom R functions
 * 2020.06.09: Rmarkdown documents and slides
 * 2020.06.02: Model building discussion
   - 06.02: How to build a statistical model

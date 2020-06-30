@@ -7,13 +7,14 @@ Files associated with data science workshops at the U. of Washington-Seattle
 #### Tuesday July 7, 2-3:30PM
 
 * Imputation and NA-inflated (aka sparse) data
+  - Group discussion
+
+**Prior to attending** please find 1 article / workflow / tutorial related to the topic and be ready to discuss. Post to Slack channel
   - When is imputation needed? 
   - What do you need in order to get valid imputation values?
   - Applications in proteomics
   - What are alternatives to imputation for sparse data?
-
-**Prior to attending** please find 1 article / workflow / tutorial related to the topic and be ready to discuss.
-
+  
 # Up-coming topics
 
 * 2020.07.14: LDheatmap

@@ -1,5 +1,6 @@
 ---
 title: "Introduction to R and the tidyverse"
+subtitle: "RSTR SNP edition"
 author: "Kim Dill-McFarland, <kadm@uw.edu>"
 date: "version `r format(Sys.time(), '%B %d, %Y')`"
 output:
@@ -16,14 +17,15 @@ editor_options:
 In this workshop, we introduce you to R and RStudio at the beginner level as well as begin to work in the tidyverse. In it, we cover:
 
 * R and RStudio including projects, scripts, and packages
-* Reading in data as a data frame
-* Vectors, single values, and data types
 * The help function
-* Manipulating data frames with tidyverse verbs 
+* Reading in data as a data frame and RData
+* Data types
+* Manipulating data within the `tidyverse`
+* Running multiple linear models with `lm`
 
 We will do all of our work in [RStudio](https://www.rstudio.com/). RStudio is an integrated development and analysis environment for R that brings a number of conveniences over using R in a terminal or other editing environments.
 
-During the workshop, we will build an R script together, which will be posted as 'live_notes' after the workshop [here](https://github.com/kdillmcfarland/workshops_UW_Seattle/tree/master/2020.03.27_IntroR).
+During the workshop, we will build an R script together, which will be posted as 'live_notes' after the workshop [here](https://github.com/hawn-lab/workshops_UW_Seattle/tree/master/2020.07.01_IntroR).
 
 # Prior to the workshop
 Please [install R](http://www.r-project.org) and [RStudio](https://www.rstudio.com/products/rstudio/download/). See the [setup instructions](notes/introR_setup.html) for more details.
@@ -74,28 +76,56 @@ Let's create an R script (File > New File > R Script) and save it as `live_notes
 We will work together to create and populate the `live_notes.R` script throughout this workshop. 
 
 ## R packages
+#### CRAN
 
-R packages are units of shareable code, containing functions that facilitate and enhance analyses. Let's install `ggplot2`, a very popular data visualization package in R that we will use later in the workshop. Packages are typically installed from [CRAN](https://www.r-project.org/) (The Comprehensive R Archive Network), which is a database containing R itself as well as many R packages. Any package can be installed from CRAN using the `install.packages` function. You can input this into your console (as opposed to `live_notes.R`) since once a package is installed on your computer, you won't need to re-install it again.
+R packages are units of shareable code, containing functions that facilitate and enhance analyses. Let's install `tidyverse`, which is actually meta-package containing several packages useful in data manipulation and plotting. Packages are typically installed from [CRAN](https://www.r-project.org/) (The Comprehensive R Archive Network), which is a database containing R itself as well as many R packages. Any package can be installed from CRAN using the `install.packages` function. You can input this into your console (as opposed to `live_notes.R`) since once a package is installed on your computer, you won't need to re-install it again.
 
 ```{r eval=FALSE}
-install.packages("ggplot2")
+install.packages("tidyverse", Ncpus=2)
 ```
+
+**This can take several minutes.**
 
 After installing a package, and *every time* you open a new RStudio session, the packages you want to use need to be loaded into the R workspace with the `library` function. This tells R to access the package's functions and prevents RStudio from lags that would occur if it automatically loaded every downloaded package every time you opened it.
 
 ```{r}
-# Data visualization
-library(ggplot2)
+# Data manipulation and visualization
+library(tidyverse)
+```
+
+#### Bioconductor
+
+[Bioconductor](https://www.bioconductor.org/) is another repository of R packages. It has different requirements for upload and houses many of the biology-relevant packages. To install from Bioconductor, you first install its installer from CRAN.
+
+```{r eval=FALSE}
+install.packages("BiocManager")
+```
+
+Then install your package of choice using it's installer. Here, we install `limma`, a package for analysis of microarray and RNA-seq data.
+
+*If prompted*, say `a` to "Update all/some/none? [a/s/n]" and `no` to "Do you want to install from sources the packages which need compilation? (Yes/no/cancel)"
+
+```{r eval=FALSE}
+BiocManager::install("limma")
 ```
 
 # Getting started
+
+Before doing anything in R, it is a good idea to set your random seed. Your analyses may not end up using a seed but by setting it, you ensure that *everything* is exactly reproducible.
+
+```{r}
+set.seed(4389)
+```
+
 ## Organize data
 
-Create a directory called `data` and move the data files you received via email to this directory.
+Create a directory called `data` and move the 3 data files from Dropbox to this directory.
 
-## Loading data into an R data frame
+## Loading data into an R
+## Data frames from `.csv`, `.tsv`, etc.
 
-One of R's most essential data structures is the data frame, which is simply a table of `m` columns by `n` rows. First, we will read in the RNA-seq cleaning metrics data into RStudio using the base R `read.table` function.
+One of R's most essential data structures is the data frame, which is simply a table of `m` columns by `n` rows. First, we will read in the SNP 
+RNA-seq cleaning metrics data into RStudio using the base R `read.table` function.
 
 Each R function follows the following basic syntax, where `Function` is the name of the function.
 
@@ -109,15 +139,15 @@ The read.table has many arguments; however, we only need to specify 3 arguments 
 * `sep` - tells R that our data are comma-separated
 * `header` - tells R that the first row in our data contains the names of the variables (columns).
 
-We will store the data as an *object* named `dat` using the assignment operator `<-`, so that we can re-use it in our analysis. 
+We will store the data as an *object* named `snp` using the assignment operator `<-`, so that we can re-use it in our analysis. 
 
 ```{r}
 # read the data and save it as an object
-dat <- read.table(file="data/AM.MDM.data.cleaning.metrics.csv", 
+snp <- read.table(file="data/Hawn_RSTR_SNPlist.PRKAG2.csv", 
                   sep=",", header=TRUE)
 ```
 
-Now whenever we want to use these data, we simply call `dat`
+Now whenever we want to use these data, we simply call `snp`
 
 ## Help function
 
@@ -131,38 +161,77 @@ You will notice that there are multiple functions of the `read.table` help page.
 
 ```{r eval=FALSE}
 # read the data with different function
-dat <- read.csv(file="data/AM.MDM.data.cleaning.metrics.csv")
+snp <- read.csv(file="data/Hawn_RSTR_SNPlist.PRKAG2.csv")
+```
+
+## Complex data from `.RData`
+
+You may have data that do not fit nicely into a single table or into a table at all (like plots). You can save these as `.RData`, which can be loaded directly into R. You can also save multiple tables and/or other objects in a single `.RData` file to make loading your data quick and easy. Moreover, `.RData` are automatically compressed so they take up less storage space than multiple tables.
+
+```{r}
+load("data/RSTR_RNAseq_dat.voom.RData")
+```
+
+Notice that these data appear already named in your R environment. Object names are determined when saving so be sure to create short but descriptive names before saving to `.RData`.
+
+Also notice that you get the message `Loading required package: limma`. If you did not have `limma` installed, you could not load these data because they are a data type specific to `limma`. You can see this by viewing the type of these data with
+
+```{r}
+class(dat.norm.voom)
 ```
 
 # Data types
+#### Simple
 
-This data frame consists of 24 rows (observations) and 55 columns (variables). You can see this quickly using the dimension function `dim`
-
-```{r}
-dim(dat)
-```
-
-Each column and each row of a data frame are individual R vectors. R vectors are one-dimensional arrays of data. For example, we can extract column vectors from data frames using the `$` operator. 
+Let's return to the simpler SNP data for now. This data frame consists of `r nrow(snp)` rows (observations) and `r ncol(snp)` columns (variables). You can see this quickly using the dimension function `dim`
 
 ```{r}
-# Extract the oxygen concentrations
-dat$sampID
+dim(snp)
 ```
 
-R objects have several different classes (types). Our data frame contains three R data types. The base R `class` function will tell you what data type an object is.
+Each column and each row of a data frame are individual R vectors. R vectors are one-dimensional arrays of data. For example, we can extract column vectors from data frames using the `$` operator.
 
 ```{r}
-class(dat)
-class(dat$sampID)
-class(dat$raw)
-class(dat$PCT_PF_ALIGNED)
+# Extract the SNP IDs
+snp$snpID
 ```
 
-We see that our `sampID` column is a factor, meaning it is a non-numeric value with a set number of unique levels. Non-numeric data that don't have set levels are class `character`.
+R objects have several different classes (types). Our data frame contains 2 R data types. The base R `class` function will tell you what data type an object is.
 
-Then we have 2 types of numeric data. `integer` meaning a whole number and `numeric` meaning a number with decimal values.
+```{r}
+class(snp)
+class(snp$snpID)
+class(snp$CHR)
+```
 
-There is one additional data types that you will commonly come across in R that is not in these data. This is the class `logical`, which is a TRUE/FALSE designation.
+We see that our `snpID` column is `character`, meaning it is non-numeric. On the other hand, `CHR` is `integer`, meaning whole number numeric.
+
+Common data types not found in these data include:
+
+* `factor`: non-numeric value with a set number of unique levels
+* `numeric`: numeric with decimal values
+* `logical`: TRUE/FALSE designation
+
+#### Complex (`S3`, `S4`)
+
+Now, let's look at the `limma EList` data. These data are in `S3` format meaning they have 3 dimensions. In essence, they are a list of multiple data frames and vectors. If you click on the `dat.norm.voom` object in your Environment tab, you will see multiple pieces.
+
+![](images/S3_obj.png)
+
+`genes` and `targets` are data frames while the other pieces are matrices. You can again see this with `class` only this time you specify a part of the `dat.norm.voom` object with `$`
+
+```{r}
+class(dat.norm.voom$genes)
+class(dat.norm.voom$E)
+```
+
+Or going deeper, you can specify one column in the `genes` data frame
+
+```{r}
+class(dat.norm.voom$genes$symbol)
+```
+
+Of note, working with `S4` objects is very similar to `S3` except that they are accessed with `@` instead of `$`.
 
 # Working with vectors and data frames
 ## Operating on vectors
@@ -170,19 +239,14 @@ There is one additional data types that you will commonly come across in R that 
 A large proportion of R functions operate on vectors to perform quick computations over their values. Here are some examples:
 
 ```{r}
-# Compute the variance of raw sequence totals
-var(dat$raw)
+# Compute the variance of library size
+var(dat.norm.voom$targets$lib.size)
 
-# Find whether any samples have greater than 1 billion raw sequences
-dat$raw > 1E9
+# Find whether any samples have greater than 1 billion  sequences
+dat.norm.voom$targets$lib.size > 1E9
 
-# Convert PCT_PF_ALIGNED from decimal to percent
-dat$PCT_PF_ALIGNED * 100
-
-# Find the unique values of sampID
-unique(dat$sampID)
-# Because this variable is a factor, we can also use
-levels(dat$sampID)
+# Find the unique values of SNP type
+unique(snp$type)
 ```
 
 ## Using the correct class
@@ -191,32 +255,32 @@ Functions executed on an object in R may respond exclusively to one or more data
 
 ```{r error=TRUE}
 # Compute the mean of sampID
-mean(dat$sampID)
+mean(snp$snpID)
 ```
 
 ## Subsetting vectors and data frames
 
-Since vectors are 1D arrays of a defined length, their individual values can be retrieved using vector indices. R uses 1-based indexing, meaning the first value in an R vector corresponds to the index 1. Each subsequent element increases the index by 1. For example, we can extract the value of the 5th element of the sampID vector using the square bracket operator `[]` like so.
+Since vectors are 1D arrays of a defined length, their individual values can be retrieved using vector indices. R uses 1-based indexing, meaning the first value in an R vector corresponds to the index 1. Each subsequent element increases the index by 1. For example, we can extract the value of the 5th element of the `snpID` vector using the square bracket operator `[ ]` like so.
 
 ```{r}
-dat$sampID[5]
+snp$snpID[5]
 ```
 
 In contrast, data frames are 2D arrays so indexing is done across both dimensions as `[rows, columns]`. So, we can extract the same oxygen value directly from the data frame knowing it is in the 5th row and 1st column.
 
 ```{r}
-dat[5, 1]
+snp[5, 1]
 ```
 
-The square bracket operator is most often used with logical vectors (TRUE/FALSE) to subset data. For example, we can subset our data frame to all observations (rows) with greater than 100 million raw sequences. 
+The square bracket operator is most often used with logical vectors (TRUE/FALSE) to subset data. For example, we can subset our data frame to all observations (rows) that are only exons.
 
 ```{r}
-# Create logical vector for which oxygen values are 0
-logical.vector <- dat$raw > 100E6
+# Create logical vector for which lib.size values are > 10 million
+logical.vector <- snp$type == "exon"
 #View vector
 logical.vector
-#Apply vector to data frame to select only observations where the logical vector is TRUE (i.e. the oxygen value is 0)
-dat[logical.vector, ]
+#Apply vector to data frame to select only observations where the logical vector is TRUE
+snp[logical.vector, ]
 ```
 
 Subsetting is extremely useful when working with large data. We will learn more complex subsets next using the tidyverse. But first...
@@ -240,21 +304,60 @@ Statement | Meaning
 
 # Exercises: Part 1
 
-1. Install the `tidyverse` package.
+1. Install `tidyverse` and `limma` packages.
 
 *Please note that if you have __R v3.3 or older__, you may not be able to install `tidyverse`. In this case, you need to separately install each package within the tidyverse. This includes:* `readr`, `tibble`, `dplyr`, `tidyr`, `stringr`, `ggplot2`, `purr`, `forcats`
 
 2. Using help to identify the necessary arguments for the log function compute the natural logarithm of 4, base 2 logarithm of 4, and base 4 logarithm of 4.
-3. Using an R function, determine what data type the `paired` variable is.
-4. Using indexing and the square bracket operator `[]`:
-    - determine what `trim` value occurs in the 20th row
-    - return the cell where `raw` equals 95,004,980
-5. Subset the data to observations where `Assigned` is greater than or equal to 20 million. *Hint*: Use a logical vector. 
 
-# The tidyverse
-## What is a tidyverse?
+Using the `snp` data frame:
+
+3. Using an R function, determine what data type the `allele.0` variable is.
+4. Using indexing and the square bracket operator `[]`:
+    - determine what `rsIS` value occurs in the 20th row
+    - return the cell where `snpID` equals "rs76923703"
+5. Subset the data to observations where `allele.0` equals "A" or "T". *Hint*: Use a logical vector. 
+
+# RSTR SNP analysis example
+
+The next section will be a targeted analysis of PRKAG2 SNPs and their relationship with PRKAG2 gene expression. In the process, we will cover some (but not all) functions in the `tidyverse`.
+
+Currently, our data are
+
+`snp`: snp information including location and genotype. Rows are SNPs
+
+```{r echo=FALSE}
+snp[1:5,1:10]
+```
+
+`dat.norm.voom$genes`: gene information including HGNC symbol and ENSEMBL ID. Rows are genes
+
+```{r echo=FALSE}
+dat.norm.voom$genes[1:5, ]
+```
+
+`dat.norm.voom$targets`: sample metadata including FULLIDNO, RSID, age, sex, etc. Rows are samples as RSID_condition
+
+```{r echo=FALSE}
+dat.norm.voom$targets[1:5, 1:5]
+
+#All variables
+colnames(dat.norm.voom$targets)
+```
+
+`dat.norm.voom$E`: voom normalized log counts per million (CPM). Rows are genes, columns are samples
+
+```{r echo=FALSE}
+dat.norm.voom$E[1:5, 1:5]
+```
+
+There is also `dat.norm.voom$weights` (gene specific weights) and `dat.norm.voom$design` (design matrix) which were used for voom normalization but will not be needed in this analysis.
+
+## What is the tidyverse?
 
 The [R tidyverse](https://www.tidyverse.org/) is a set of packages aimed at making, manipulating, and plotting tidy data. Everything we've done thus far has been in base R. Now we will move into the tidyverse!
+
+While base R can accomplish most tasks, base R code is rather slow and can quickly become extremely convoluted. Compared to base R, `tidyverse` code runs much faster. It is also much more readable because all operations are based on using _verbs_ (select, filter, mutate...) rather than base R's more difficult to read indexing system (brackets, parentheses...). 
 
 First, we need to load the package, which will give us a message detailing all the packages this one command loads for us.
 
@@ -262,38 +365,11 @@ First, we need to load the package, which will give us a message detailing all t
 library(tidyverse)
 ```
 
-## Loading data with readr
+### Common tidyverse functions
 
-The most common formats for medium to medium-large data sets are *comma-* or *tab-separated values* (`.csv` and `.tsv`/`.txt`, respectively). In this format, the data is stored in plain text, with one observation per line, and variables within each observation separated by a comma or tab. 
+Though we will not use all of these in this workshop, here is a list of some commonly used tidyverse functions.
 
-The readr functions `read_csv` and `read_tsv` help read in data at quick speeds compared to base R's `read.csv` and `read.tsv` functions. Furthermore, readr's data loading functions automatically parse your data into data types (numeric, character, etc) based on the values in the first 1000 rows. 
-
-Let's start by re-loading in the data we previously loaded with base R's `read.table`.
-
-```{r}
-dat <- read_csv(file="data/AM.MDM.data.cleaning.metrics.csv")
-```
-
-We can then view all the classes it automatically assigned to our variables.
-
-```{r}
-spec(dat)
-```
-
-First, you'll see that `sampID` is no longer a factor. What happened?? Tidyverse is more strict about types and classes than base R. Since we did not tell it that this column was a factor, it does not assume that it is.
-
-Second, you'll see that all our numeric/integer values are now `double`. This is another number class in R that stands for "double precision floating point numbers". Under the hood, doubles are more exact than numeric and more flexible than integer. So, tidyverse preferentially assigns number data to double.
-
-If we wanted to change any of these assignments, we could like so.
-
-```{r}
-dat <- read_csv(file="data/AM.MDM.data.cleaning.metrics.csv",
-                col_types=cols(sampID=col_factor()))
-```
-
-## Data wrangling with dplyr
-
-`dplyr` is a package within the tidyverse. It provides many functions for manipulating data frames including typical tasks like:
+The `dplyr` package provides many functions for manipulating data frames including typical tasks like:
 
 - `select` a subset of variables (columns)
 - `filter` out a subset of observations (rows)
@@ -303,57 +379,136 @@ dat <- read_csv(file="data/AM.MDM.data.cleaning.metrics.csv",
 - `group_by` a variable and `summarise` data by the grouped variable
 - `*_join` two data frames into a single data frame
 
-and others...
+The `tidyr` package contains functions for manipulating entire data frames including
 
-While base R can accomplish all of these tasks, base R code is rather slow
-and can quickly become extremely convoluted. 
+* `pivot_longer` convert wide to long format
+* `pivot_wider` convert long to wide format
 
-Currently, the most popular alternative for data wrangling is the package
-_dplyr_. It is so good at what it does, and integrates so well with other 
-popular tools like _ggplot2_, that it has rapidly become the de-facto standard and it is what we will focus on today. 
+## Loading data with readr
 
-Compared to base R, dplyr code runs much faster. It is also much more readable because all operations are based on using dplyr functions or _verbs_ (select, filter, mutate...) rather than base R's more difficult to read indexing system (brackets, parentheses...). 
+The readr functions `read_csv` and `read_tsv` help read in data at quick speeds compared to base R's `read.csv` and `read.tsv` functions. Furthermore, readr's data loading functions automatically parse your data into data types (numeric, character, etc) based on the values in the first 1000 rows. 
 
-Each verb works similarly:
-
-- input data frame in the first argument
-- other arguments can refer to variables as if they were local objects
-- output is another data frame
-
-Before working with our data, we first want to make a copy of it so that we may revert to it quickly if we make any mistakes. This is best practices for data science in general.
+Let's start by re-loading in the data we previously loaded with base R's `read.table`.
 
 ```{r}
-raw_data <- dat
+snp <- read_csv(file="data/Hawn_RSTR_SNPlist.PRKAG2.csv")
 ```
 
-### Select
-
-You can use the `select` function to focus on a subset of variables (columns). Let's select the variables that we will need for this workshop. Here, we will use `dat` and select the variables:
-
-* `sampID` Sample ID
-* `raw` Total raw sequences
-* `trim` Total trimmed sequences
-* `both.align.paired` Total sequences where both reads aligned
-* `both.align.paired_filter` Total sequences where both reads aligned and were high-quality
-* `Assigned_paired` Total sequences assigned to a known gene
+We can then view all the classes it automatically assigned to our variables.
 
 ```{r}
-dat <- select(dat,
-              sampID, raw, trim, 
-              both.align.paired,
-              both.align.paired_filter,
-              Assigned_paired)
+spec(snp)
 ```
 
-### Filter
+You'll see that all our numeric/integer values are now `double`. This is another number class in R that stands for "double precision floating point numbers". Under the hood, doubles are more exact than numeric and more flexible than integer. So, tidyverse preferentially assigns number data to double.
 
-You can use `filter` to select specific rows based on a logical condition of a variable. Below we filter the data such that we only retain Media samples. Note that here we're using a conditional statement that you have not seen before. Check it out with `?grepl`
+Also note that the tidyverse was able to read the FULLIDNO column names as is without adding the leading "X" that read.table did.
+
+Not that there is no tidyverse-specific function for loading `.RData`. You would still load it with `load`.
+
+## Data wrangling
+
+Our goal is to get the following data frame. When you have multiple (and complex) objects like we have in these data, it is often a good idea to sketch our your goal before beginning the wrangling process.
+
+|sample  |PRKAG2| RSID   | FULLIDNO |condition|snp1|snp2|age| ... |
+|--------|------|--------|----------|---------|----|----|---|-----|
+|sample1 |  -2  |RS102051|84222-1-20| MEDIA   | 0  | 1  | 12| ... |
+|sample2 |  2   |RS102051|84222-1-20| TB      | 1  | 1  | 11| ... |
+
+Then we can model with a linear model like
+
+`PRKAG2 ~ condition*snp1 + age`
+
+### Extract from `S3` object
+
+Our metadata is contained in `snp` and `dat.norm.voom$targets` and indexed by different IDs (RSID vs FULLIDNO). This includes everything in our goal data frame except PRKAG2 expression.
+
+First extract the `dat.norm.voom` metadata into a separate data frame to work with.
 
 ```{r}
-dat <- filter(dat, grepl("Media",sampID))
+meta <- dat.norm.voom$targets
 ```
 
-As we saw earlier, conditional statements and logical expressions in R are extremely powerful and allow us to filter the data in almost any way imaginable.
+### Select columns
+
+Then separate the `snp` data into its two main parts: info on SNPs vs. genotypes of samples.
+
+We use the tidyverse function `select` to keep the columns of interest either listing them all by name or using `A:B` to indicate keeping all columns from A to B. 
+
+```{r}
+meta.snp <- select(snp, 
+                   snpID, rsID, gene_id, symbol, type,
+                   CHR, POS, allele.0, allele.1)
+
+geno <- select(snp, 
+               snpID, `84165-1-06`:`94295-1-02`)
+```
+
+Note that since the FULLIDNO are not accepted variable names (they start with a number), we need to surround them with `` for R to treat them as column names. This was also why read.table appended an "X" to those names before.
+
+### Pivot wide to long format
+
+We want to combine `geno` and `meta` matching their FULLIDNO. However, FULLIDNO are column names in `geno` while they are in 1 single variable in `meta`. If we transpose `geno`, we will have a FULLIDNO variable to match with `meta`.
+
+There are several ways to do this including a simple transpose with `t()`. However, this function does not play well with column vs row names and get mess up your data. So, we'll use the tidyverse!
+
+First, we convert the `geno` table from wide format (1 row per SNP) to long format (1 column per variable). Here, we specify the `geno` data frame, the variables we want to collapse (written as all but snpID with `-snpID`), and then the names we want to give the new columns.
+
+Pivoting can be tricky so it is best to *always* look at your table before and after!
+
+```{r}
+geno
+
+geno <- pivot_longer(geno,
+                -snpID, names_to="FULLIDNO", values_to="genotype")
+
+geno
+```
+
+### Mutate 0/0 to 0
+
+While we have a single column for genotype, now is a good time to convert it to the format we'll use in linear models. 
+
+The current genotype data are character variables of 0/0, 0/1, 1/1. When we run our linear models later on, we want these to be numeric variables of 0, 1, 2 so that we can estimate the effects of how many alternate allele copies an individual has.
+
+The best way to do this is using factors.
+
+```{r}
+#Recode to factor
+geno <- mutate(geno, geno.num = factor(genotype))
+
+#Change factor levels
+geno <- mutate(geno, geno.num = recode_factor(geno.num,
+                                      "0/0" = 0,
+                                      "0/1" = 1,
+                                      "1/1" = 2))
+#Recode to numeric
+geno <- mutate(geno, 
+               geno.num = as.numeric(as.character(geno.num)))
+```
+
+### Pivot long to wide format
+
+This is all the manipulation we want to do to the internal data, so that last step is to convert the table back to wide format (e.g. undo `pivot_longer`). This time, we want rows to be samples so we use the snpID as names
+
+Select our cleaned variables.
+
+```{r}
+geno <- select(geno, snpID, FULLIDNO, geno.num)
+```
+
+Convert to wide format.
+
+```{r}
+geno <- pivot_wider(geno, 
+                     names_from = "snpID", values_from = "geno.num")
+```
+
+And so we have
+
+```{r}
+geno
+```
 
 ### Piping with `%>%`
 
@@ -363,120 +518,142 @@ Recall the basic dplyr verb syntax:
 - other arguments can refer to variables as if they were local objects
 - output is another data frame
 
-Our data cleaning code continuously overwrites the `dat` object 
-every time we call a dplyr verb. Instead, we can chain commands together using the pipe `%>%` operator. This works nicely to condense code and to improve readability.
+Our data cleaning code continuously overwrites the `geno` object 
+every time we call a verb. Instead, we can chain commands together using the pipe `%>%` operator. This works nicely to condense code and to improve readability.
 
 `f(x) %>% g(y)` is the same as `g(f(x),y)`
 
-`select(dat, raw)` is the same as `dat %>% select(raw)`
+`select(geno, snpID)` is the same as `genp %>% select(snpID)`
 
-Let's return to our `raw_dat` and perform the select and filter steps with pipes. Note how I've added comments within the function to aid the reader.
-
-
-```{r}
-dat <- raw_data %>%
-  #Select variables of interest
-  select(sampID, raw, trim, 
-         both.align.paired,
-         both.align.paired_filter,
-         Assigned_paired) %>% 
-  #Filter to Media samples only
-  filter(grepl("Media",sampID))
-```
-
-## Manipulating data frames with tidyr
-
-We will now move into another tidyverse package! tidyr contains functions for manipulating entire data frames including
-
-* `pivot_longer` convert wide to long format
-* `pivot_wider` convert long to wide format
-
-and others that we will not go over today.
-
-### Wide vs. long data
-
-Wide and long describe two different formats for a data frame. Wide data is where each variable is given its own column. Narrow data is where one column contains all of the variable names, and another column contains all of the values of these variables.
-
-For example, this wide data
-
-```{r, echo=FALSE}
-set.seed(123)
-wide = data.frame(
-  sample_ID = c(1,2,3,4),
-  year_2015 = runif(4, 0, 1) %>% round(3), 
-  year_2016 = runif(4, 0.2, 1.2) %>% round(3),
-  year_2017 = runif(4, 0.5, 1.5) %>% round(3)
-)
-
-wide
-```
-
-contains the same information as this long data.
-
-```{r echo=FALSE}
-gather(wide, key="Year", value="Value", -sample_ID)
-```
-
-Our data is in the wide format.
+Let's return to our `snp` and perform all the above wrangling in 1 piped function. Note how I've added comments within the function to aid the reader.
 
 ```{r}
-dim(dat)
-head(dat)
+geno <- snp %>% 
+  #Select genotype data
+  select(snpID, `84165-1-06`:`94295-1-02`) %>% 
+  #Convert to long format
+  pivot_longer(-snpID, names_to="FULLIDNO", values_to="genotype") %>% 
+  #Convert genotype 0/0 to 0 format
+  mutate(geno.num = factor(genotype)) %>% 
+  mutate(geno.num = recode_factor(geno.num,
+                                      "0/0" = 0,
+                                      "0/1" = 1,
+                                      "1/1" = 2)) %>% 
+  mutate(geno.num = as.numeric(as.character(geno.num))) %>% 
+  #Convert back to wide format
+  select(snpID, FULLIDNO, geno.num) %>% 
+  pivot_wider(names_from = "snpID", values_from = "geno.num")
 ```
 
-### pivot_
+### Joining data frames
 
-Here, we pivot our data from wide to long format, specifying that we want to pivot everything *except* the sample IDs.
+We can now combine `meta` and our reformatted `geno` data but the FULLIDNO column that they both have.
+
+There are a suite of tidyverse functions for combining two tables, all starting with `join_`. They differ in which rows that keep from each of the two data frames being combined. For example, `left_join` keep all the rows in the left (first) data frame given and removes any rows from the right (second) data frame that do not have matches in the left one. 
+
+A great reference on join functions can be found at <https://stat545.com/join-cheatsheet.html>
+
+Here, we will use `inner_join` which only keeps rows with data in BOTH data frames. For us, this means we only keep data with both `geno` genotype data and RNA-seq since `meta` came from `dat.norm.voom`.
+
+We also don't need all the columns from `meta` so we select what we want first. 
 
 ```{r}
-dat <- dat %>% 
-  pivot_longer(-sampID, names_to = "name", values_to = "value")
+meta.geno <- meta %>% 
+  select(libID, sampID, FULLIDNO, condition, 
+         dataset, Sample_Group, M0_KCVAGE) %>% 
+  inner_join(geno, by="FULLIDNO")
 ```
 
-This results in a much longer data frame
+If you wanted to use different variables, checkout all those available.
 
 ```{r}
-dim(dat)
-
-head(dat)
+colnames(meta)
 ```
 
-We can then undo this with `pivot_wider`.
+### Filtering rows
+
+Our final piece of data to add is the PRKAG2 expression from `dat.norm.voom$E`. First, we extract these data and force it into a data frame (since it is a matrix).
 
 ```{r}
-dat <- dat %>% 
-  pivot_wider(names_from = "name", values_from = "value")
-
-head(dat)
+counts <- as.data.frame(dat.norm.voom$E)
 ```
 
-`pivot_` functions are often difficult to wrap your head around. Be sure to always look at the data before and after to make sure you've accomplished what you set out to do!
+We then filter the PRKAG2 row.
 
-# Graphics with ggplot2
+```{r}
+prkag2 <- counts %>% 
+  #Move rownames to a variable/column
+  rownames_to_column("symbol") %>% 
+  #Keep only PRKAG2 row
+  filter(symbol == "PRKAG2")
+```
 
-ggplot2 is the tidyverse's main plotting package. Full documentation is available at
-[docs.ggplot2.org](http://docs.ggplot2.org/current/)
+### More pivoting and joining
 
-## Why ggplot?
+Similar to steps with `geno`, we convert our PRKAG2 data to long format and join it to `meta.geno`
 
-ggplot2 is an implementation of _Grammar of Graphics_ (Wilkinson 1999) for R
+```{r}
+meta.geno.prkag2 <- prkag2 %>% 
+  #Convert to long format
+  pivot_longer(-symbol, names_to="libID", values_to="PRKAG2") %>% 
+  #Remove HGNC symbol column
+  ## If you have > 1 gene, you would not do this
+  select(-symbol) %>% 
+  #Merge with meta.geno
+  inner_join(meta.geno, by="libID")
+```
 
-Benefits:
+## Linear model
 
-- handsome default settings
-- snap-together building block approach
-- automatic legends, colors, facets
-- statistical overlays: regressions lines and smoothers (with confidence intervals)
+Finally, we have our formatted data! Here are all our variables.
 
-Drawbacks:
+```{r}
+colnames(meta.geno.prkag2)
+```
 
-- it can be hard to get it to look *exactly* the way you want
-- requires having the input data in a certain format
+### Fit model
 
-## ggplot building blocks
+We fit a linear model with `lm( )` where the formula is given as `y ~ x`. Here we want to know if the effect of genotype at SNP JHU_7.151349226 differs in MEDIA vs TB samples (condition). We also include age as a co-variate as an example of how to correct with variables such as this.
+
+```{r}
+model <- lm(PRKAG2 ~ condition*JHU_7.151349226 + M0_KCVAGE,
+   data=meta.geno.prkag2)
+```
+
+And then we estimate P-values with `summary( )`
+
+```{r}
+summary(model)
+```
+
+Or you can get a clean data frame summary with `tidy( )` in the `broom` package.
+
+```{r eval=FALSE}
+install.packages("broom")
+```
+
+```{r}
+library(broom)
+tidy(model)
+```
+
+### Assess model
+
+A quick way to assess your model, is my plotting the residuals. A nice explanation of the Q-Q plot can be found at <https://stats.stackexchange.com/questions/101274/how-to-interpret-a-qq-plot>
+
+```{r}
+#Set plot frame to be 2x2
+par(mfrow=c(2,2))
+#Plot model fit
+plot(model)
+```
+
+### Plot model
+
+We do not have enough time to go over plotting with ggplot in detail. The main aspects to know are:
 
 - data: 2D table (`data.frame`) of _variables_
-- _aesthetics_: map variables to visual attributes (e.g., position)
+- _aesthetics_: map variables to visual attributes (e.g. position)
 - _geoms_: graphical representation of data (points, lines, etc.)
 - _stats_: statistical transformations to get from data to points in
 the plot(binning, summarizing, smoothing)
@@ -484,110 +661,83 @@ the plot(binning, summarizing, smoothing)
 - _facets_: juxtapose mini-plots of data subsets, split by variable(s)
 - _guides_: axes, legend, etc. reflect the variables and their values
 
-Idea: independently specify and combine the blocks to create the plot
-you want.
+And an example plot that would be useful for the model we built above.
 
-There are at least three things we have to specify to create a plot:
-
-1. data
-2. aesthetic mappings from data variables to visual properties
-3. a layer describing how to draw those properties
-
-## geom_point
-
-The point geom is used to create scatterplots. 
-
-The first argument of ggplot is the data, hence we pipe our data into the ggplot function. The second argument is the aesthetics, which are used by all subsequent geoms. We then add a geom_point to the ggplot object, specifying that we want size 1 points.  Here, geom_point takes the aesthetics of the ggplot object and understands that we want to plot `sampID` on the x-axis and `raw` on the y-axis. 
-
-Let's examine each sample's total raw sequences.
-
-```{r}
-dat %>%
-  ggplot(aes(x=sampID, y=raw)) +
-  geom_point()
+```{r message=FALSE}
+ggplot(meta.geno.prkag2,
+       #Define x and y variables
+         aes(x=JHU_7.151349226, y=PRKAG2)) +
+  #Create boxplots
+  ## Use group to force gglot to treat genotype like character 
+  ## instead of numeric
+  ## Set the outlier shape to NULL so that you don't get duplicate
+  ## dots in the next layer.
+  geom_boxplot(aes(group=JHU_7.151349226), outlier.shape=NULL) +
+  #Add points for each sample. Color by MEDIA/TB and "jitter" left 
+  # and right (width) to avoid overlap
+  geom_jitter(aes(color=condition), width = 0.2, height=0) +
+  # Add a linear fit for each condition
+  geom_smooth(aes(color=condition), method="lm", se=FALSE) +
+  #Add a linear fit for genotype overall
+  geom_smooth(color="grey", method="lm", se=FALSE) +
+  #Format axis labels
+  labs(y="PRKAG2 normalized log2 expression") +
+  scale_x_continuous(breaks=c(0,1,2)) +
+  #Change theme to classic to remove grey background and other
+  #default aspects of ggplot
+  theme_classic()
 ```
 
-## geom_bar
+In the above, the grey line is the overall effect of SNP genotype, which is significant in the model (P = 0.0444). The other colored lines are the fit within all MEDIA or TB samples separately. In our model, `conditionTB:JHU_7.151349226` corresponds to this interaction term and shows that the slopes are significantly different (P = 0.0239).
 
-Unfortunately, we don't have enough time to go into all the amazing things ggplot can do. So, here we'll provide one intense ggplot statement and go through it step-by-step in an effort to get in as many useful functions as possible. We'll start with `raw_dat` to again demonstrate the dplyr verbs you learned earlier
+We don't specifically see the final significant term from our model (conditionTB P < 2e-16) but can estimate is to see that overall, TB samples have higher expression than MEDIA samples.
 
-```{r}
-#Save the plot to the environment
-plot1 <- 
-#### Data manipulation #### 
-  raw_data %>%
-  #Select variables of interest
-  select(sampID, raw, trim, 
-         both.align.paired,
-         both.align.paired_filter,
-         Assigned_paired) %>% 
-  #Filter to Media samples only
-  filter(grepl("Media",sampID)) %>% 
-  #Convert data to long format
-  pivot_longer(-sampID, names_to = "group", values_to = "sequences") %>% 
-  #Convert group into a factor and force the level order
-  mutate(group = factor(group, levels=c("raw", "trim", "both.align.paired",
-                                        "both.align.paired_filter", 
-                                        "Assigned_paired"))) %>% 
+## Cautions with these data
+#### Duplicates
 
-#### Basic plot  #### 
-  #Initiate ggplot of sequences in each sample, 
-  ggplot(aes(x=sampID,y=sequences, 
-             #Fill bar color by the variable group
-             #Also tell which variable to group bars by
-             fill=group)) +
-  #Create a bar plot, grouping all groups from each sample together
-  geom_bar(stat="identity", position=position_dodge()) +
-  
-#### Customization ####
-  #Add a theme to change the overall look of the plot
-  theme_classic() +
-  #Rotate x-axis labels so we can read them
-  theme(axis.text.x = element_text(angle = 90)) +
-  #Re-label the legend
-  scale_fill_discrete(name="", labels=c("Raw",
-                                        "Min quality, adapter trimmed",
-                                        "Aligned, paired",
-                                        "High-quality aligned, paired",
-                                        "Assigned to gene")) +
-  #Re-label the axes
-  labs(x="",y="Total sequences") +
-  #add a title
-  ggtitle("Sequences retained during RNA-seq clean-up")
+There are two types of sample duplicates in these data. 
+
+1. Paired MEDIA and TB samples
+    - If you do an analysis with both conditions like above, your model needs to block by sample (RSID) to take into account the experimental design. This can be done with the package `lme4`. See this past workshop for examples <https://github.com/hawn-lab/workshops_UW_Seattle/tree/master/2020.05.12_linear_models>
+
+2. There are multiple samples (RSID) for some individuals (FULLIDNO). If these exist in the subset of data you are interested in, your model needs to take this into account OR you should choose 1 RNA-seq sample per individual.
+
+```{r echo=FALSE}
+meta.geno.prkag2 %>% 
+  #Keep unique rows
+  distinct(FULLIDNO, sampID) %>% 
+  #Collapse RSID for each FULLIDNO
+  group_by(FULLIDNO) %>% 
+  mutate(RSIDs = paste(unique(sampID), collapse = ","),
+         samps = length(unique(sampID))) %>% 
+  #Keep FULLIDNO with >1 RSID 
+  filter(samps>1) %>% 
+  select(FULLIDNO, RSIDs) %>% 
+  arrange(FULLIDNO) %>% 
+  as.matrix()
 ```
 
-Now we can view the plot
+#### Sample size
 
-```{r}
-plot1
-```
-
-## Save a ggplot
-
-`ggsave` provides a quick way to save plots in a variety of formats (see `?ggsave` for all options). This allows you to reproducibility create figures from a script and can be very helpful when tweaking a figure for publication.
-
-```{r}
-ggsave(filename = "images/total.seqs.pdf", 
-       plot = plot1,
-       height=4, width=6)
-```
+Be aware of your sample sizes. For example, in our analysis above, there are only 2 individuals (4 RNA-seq samples) with genotype 2. This is very small so how confident are we in the model fit?
 
 # Exercises: Part 2
 
-In these exercises, we challenge you to expand your knowledge by applying new functions from the tidyverse. You'll likely need to use the help pages (and any Googling you want).
+Using `meta.geno.prkag2`
 
-1. Rename the `raw` and `trim` columns to more descriptive names using dplyr's `rename` function. 
-2. Arrange the data frame from most to least raw sequences using dplyr's `arrange` function. *Hint* the default behavior is to arrange in ascending order
-3. Further explore the final ggplot function by deleting one or more lines of the customization. Run the plot to see want changes. 
-4. Challenge: Instead of plotting total sequences, plot values as a percentage of raw sequences in each sample. *Hint* You'll need to use `mutate` and `group_by`. The goal plot looks like
+1. Fit linear models on MEDIA and TB sample subsets separately. How do the results compare to the interaction term model we ran above? (*Hint* tidyverse pipes can be used to pipe modified data directly into ggplot)
 
-![](images/challenge.plot.png)
+Using your own gene of interest
+
+2. Recapitulate these analyses with another gene.
+
+3. Challenge: How would you run the same linear model on all SNPs in a gene?
 
 # Additional resources
 ## Groups
 
 * [Rladies Seattle](https://www.meetup.com/rladies-seattle/) Not just for ladies! A pro-actively inclusive R community with both in-person and online workshops, hangouts, etc.
-* [R code club](https://www.riffomonas.org/code_club/) Dr. Pat Schloss is opening his lab's coding club to remote participation. 
+* [R code club](https://www.riffomonas.org/code_club/) Dr. Pat Schloss opened his lab's coding club to remote participation. 
 * [Seattle useR Group](https://www.meetup.com/Seattle-useR/)
 
 ## Online
@@ -603,5 +753,11 @@ In these exercises, we challenge you to expand your knowledge by applying new fu
 * [ggplot tutorial 1](http://r-statistics.co/Complete-Ggplot2-Tutorial-Part1-With-R-Code.html)
 * [ggplot tutorial 2](https://rpubs.com/g_jw/ggplot2_tutorial)
 * [ggplot tutorial 3](http://tutorials.iq.harvard.edu/R/Rgraphics/Rgraphics.html#the_1_faq)
+
+# R session
+
+```{r}
+sessionInfo()
+```
 
 ***

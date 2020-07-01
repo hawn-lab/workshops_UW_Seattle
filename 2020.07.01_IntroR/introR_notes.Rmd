@@ -4,12 +4,12 @@ subtitle: "RSTR SNP edition"
 author: "Kim Dill-McFarland, <kadm@uw.edu>"
 date: "version `r format(Sys.time(), '%B %d, %Y')`"
 output:
+  pdf_document:
+    toc: yes
   html_document:
     toc: yes
     toc_float:
       collapsed: no
-  pdf_document:
-    toc: yes
 editor_options:
   chunk_output_type: console
 ---
@@ -518,8 +518,7 @@ Recall the basic dplyr verb syntax:
 - other arguments can refer to variables as if they were local objects
 - output is another data frame
 
-Our data cleaning code continuously overwrites the `geno` object 
-every time we call a verb. Instead, we can chain commands together using the pipe `%>%` operator. This works nicely to condense code and to improve readability.
+Our data cleaning code continuously overwrites the `geno` object every time we call a verb. Instead, we can chain commands together using the pipe `%>%` operator. This works nicely to condense code and to improve readability.
 
 `f(x) %>% g(y)` is the same as `g(f(x),y)`
 
@@ -534,8 +533,7 @@ geno <- snp %>%
   #Convert to long format
   pivot_longer(-snpID, names_to="FULLIDNO", values_to="genotype") %>% 
   #Convert genotype 0/0 to 0 format
-  mutate(geno.num = factor(genotype)) %>% 
-  mutate(geno.num = recode_factor(geno.num,
+  mutate(geno.num = recode_factor(factor(genotype),
                                       "0/0" = 0,
                                       "0/1" = 1,
                                       "1/1" = 2)) %>% 
@@ -547,7 +545,7 @@ geno <- snp %>%
 
 ### Joining data frames
 
-We can now combine `meta` and our reformatted `geno` data but the FULLIDNO column that they both have.
+We can now combine `meta` and our reformatted `geno` data by the FULLIDNO column that they both have.
 
 There are a suite of tidyverse functions for combining two tables, all starting with `join_`. They differ in which rows that keep from each of the two data frames being combined. For example, `left_join` keep all the rows in the left (first) data frame given and removes any rows from the right (second) data frame that do not have matches in the left one. 
 
@@ -559,8 +557,7 @@ We also don't need all the columns from `meta` so we select what we want first.
 
 ```{r}
 meta.geno <- meta %>% 
-  select(libID, sampID, FULLIDNO, condition, 
-         dataset, Sample_Group, M0_KCVAGE) %>% 
+  select(libID, sampID, FULLIDNO, condition, M0_KCVAGE) %>% 
   inner_join(geno, by="FULLIDNO")
 ```
 
@@ -639,7 +636,7 @@ tidy(model)
 
 ### Assess model
 
-A quick way to assess your model, is my plotting the residuals. A nice explanation of the Q-Q plot can be found at <https://stats.stackexchange.com/questions/101274/how-to-interpret-a-qq-plot>
+A quick way to assess your model, is by plotting the residuals. A nice explanation of the Q-Q plot can be found at <https://stats.stackexchange.com/questions/101274/how-to-interpret-a-qq-plot> and some more tests are shown at <https://www.statmethods.net/stats/rdiagnostics.html>
 
 ```{r}
 #Set plot frame to be 2x2
@@ -648,12 +645,31 @@ par(mfrow=c(2,2))
 plot(model)
 ```
 
-### Plot model
+## Graphics with ggplot2
 
-We do not have enough time to go over plotting with ggplot in detail. The main aspects to know are:
+ggplot2 is the tidyverse's main plotting package. Full documentation is available at
+[docs.ggplot2.org](http://docs.ggplot2.org/current/)
+
+### Why ggplot?
+
+ggplot2 is an implementation of _Grammar of Graphics_ (Wilkinson 1999) for R
+
+Benefits:
+
+- handsome default settings
+- snap-together building block approach
+- automatic legends, colors, facets
+- statistical overlays: regressions lines and smoothers (with confidence intervals)
+
+Drawbacks:
+
+- it can be hard to get it to look *exactly* the way you want
+- requires having the input data in a certain format
+
+### ggplot building blocks
 
 - data: 2D table (`data.frame`) of _variables_
-- _aesthetics_: map variables to visual attributes (e.g. position)
+- _aesthetics_: map variables to visual attributes (e.g., position)
 - _geoms_: graphical representation of data (points, lines, etc.)
 - _stats_: statistical transformations to get from data to points in
 the plot(binning, summarizing, smoothing)
@@ -661,7 +677,84 @@ the plot(binning, summarizing, smoothing)
 - _facets_: juxtapose mini-plots of data subsets, split by variable(s)
 - _guides_: axes, legend, etc. reflect the variables and their values
 
-And an example plot that would be useful for the model we built above.
+Idea: independently specify and combine the blocks to create the plotyou want.
+
+There are at least three things we have to specify to create a plot:
+
+1. data
+2. aesthetic mappings from data variables to visual properties
+3. a layer describing how to draw those properties
+
+### Boxplot
+
+We will start with a boxplot of our data with the SNP genotype on X and gene expression on Y.
+
+```{r}
+ggplot(meta.geno.prkag2, aes(x=JHU_7.151349226, y=PRKAG2)) +
+  geom_boxplot()
+```
+
+But as we see above, boxplots don't work with numeric x-variables. The warning gives us a hint of what to do with the group option. Since we want groups to apply to just the boxplots (and not any other geoms we may add later), we put the group aesthetic in geom_boxplot.
+
+```{r}
+ggplot(meta.geno.prkag2, aes(x=JHU_7.151349226, y=PRKAG2)) +
+  geom_boxplot(aes(group=JHU_7.151349226))
+```
+
+### Multiple geoms
+
+The building block nature of ggplot allows us to add multiple geoms on top of each other. So we can include individual dots for each sample with geom_point to see the sample sizes within each boxplot.
+
+```{r}
+ggplot(meta.geno.prkag2, aes(x=JHU_7.151349226, y=PRKAG2)) +
+  geom_boxplot(aes(group=JHU_7.151349226)) +
+  geom_point()
+```
+
+But a lot of points overlap so we switch to geom_jitter to spread them out. Setting the jitter height to 0 ensures that the perceived y values are correct for these data.
+
+```{r}
+ggplot(meta.geno.prkag2, aes(x=JHU_7.151349226, y=PRKAG2)) +
+  geom_boxplot(aes(group=JHU_7.151349226)) +
+  geom_jitter(width = 0.2, height=0) 
+```
+
+And while this is not an issue in this plot (since there are no outliers), you should also remove the outliers plotted by geom_boxplot or else there will be duplicate points with geom_jitter.
+
+```{r}
+ggplot(meta.geno.prkag2, aes(x=JHU_7.151349226, y=PRKAG2)) +
+  geom_boxplot(aes(group=JHU_7.151349226), 
+               outlier.shape=NULL) +
+  geom_jitter(width = 0.2, height=0) 
+```
+
+### Fit lines
+
+We fit a linear fit to our data so let's add it to the plot. This is done with geom_smooth.
+
+```{r message=FALSE}
+ggplot(meta.geno.prkag2, aes(x=JHU_7.151349226, y=PRKAG2)) +
+  geom_boxplot(aes(group=JHU_7.151349226), 
+               outlier.shape=NULL) +
+  geom_jitter(width = 0.2, height=0) +
+  geom_smooth(method="lm")
+```
+
+But this isn't exactly what we modeled, right? We grouped the samples by SNP genotype and condition. We can add this in by coloring the points and the fit line.
+
+```{r message=FALSE}
+ggplot(meta.geno.prkag2, aes(x=JHU_7.151349226, y=PRKAG2)) +
+  geom_boxplot(aes(group=JHU_7.151349226), 
+               outlier.shape=NULL) +
+  geom_jitter(aes(color=condition), width = 0.2, height=0) +
+  geom_smooth(aes(color=condition), method="lm")
+```
+
+Now we clearly see why the interaction term is significant as the slopes of our two lines differ.
+
+### Further beautification
+
+Below are just a couple other tricks to perfect this plot.
 
 ```{r message=FALSE}
 ggplot(meta.geno.prkag2,
@@ -690,7 +783,34 @@ ggplot(meta.geno.prkag2,
 
 In the above, the grey line is the overall effect of SNP genotype, which is significant in the model (P = 0.0444). The other colored lines are the fit within all MEDIA or TB samples separately. In our model, `conditionTB:JHU_7.151349226` corresponds to this interaction term and shows that the slopes are significantly different (P = 0.0239).
 
-We don't specifically see the final significant term from our model (conditionTB P < 2e-16) but can estimate is to see that overall, TB samples have higher expression than MEDIA samples.
+We don't specifically see the final significant term from our model (conditionTB P < 2e-16) but can estimate it by observing that overall, TB samples have higher expression than MEDIA samples.
+
+### Complex plots
+#### Facets
+
+A quick way to make a lot of plots is with facets. The power of facets is harnessed by combining tidyverse pipes with ggplot. Here, we modify the `meta.geno.prkag2` data but don't save it as an object in the environment. We instead pipe the modified data directly into ggplot.
+
+```{r message=FALSE}
+meta.geno.prkag2 %>% 
+  #Select metadata and first 3 SNPs
+  select(libID:rs5017429) %>% 
+  #Pivot SNP data long into 1 column
+  pivot_longer(JHU_7.151253265:rs5017429,
+               names_to = "snpID", values_to = "genotype") %>%
+  
+ggplot(aes(x=genotype, y=PRKAG2)) +
+  geom_boxplot(aes(group=genotype), outlier.shape=NULL) +
+  geom_jitter(aes(color=condition), width = 0.2, height=0) +
+  geom_smooth(aes(color=condition), method="lm", se=FALSE) +
+  geom_smooth(color="grey", method="lm", se=FALSE) +
+  labs(y="PRKAG2 normalized log2 expression") +
+  scale_x_continuous(breaks=c(0,1,2)) +
+  theme_classic() +
+  #Add facet
+  facet_wrap(~snpID)
+```
+
+Note that here, our X and Y scales are similar but facets allow you to vary scales with the `scales` parameter within `facet_wrap`.
 
 ## Cautions with these data
 #### Duplicates

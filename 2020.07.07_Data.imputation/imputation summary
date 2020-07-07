@@ -1,0 +1,41 @@
+Why do you have missing data – is it random or not random?
+	For example, in proteomics, data can be missing because its lowly expressed (not random) or a post-translational modification changed its mass (random).
+
+Should I impute ?
+-	You should have no more than 25% missing data
+-	Works better if imputing replicates (ie same condition, treatment, etc) rather than imputing for example human variation
+-	At times, performing classification without imputation yields the ost accurate classification  think about your data
+
+Imputation Methods
+1.	Single digit replacement
+2.	Imputation on local structures
+3.	Imputation on global structures
+
+Single digit replacement
+-	Replace missing value by a constant or a randomly selected value
+-	Generally have lower performance
+-	Perform better in presence of left-censored missing values (low intensity data)
+-	Common approaches
+o	Half of the minimum intensity among peptides
+o	Half of the minimum intensity of individual peptide
+o	Random draw from a truncated normal distribution – calculate parameter k to allow the truncated distribution to merge into the left tail of the base distribution without yielding a bimodal distrubition via recursive visualization of imputed values
+
+Local Similarity Approaches
+-	Estimate missing values based on expression profile of several other peptides with similar peptide intensity profiles in the same dataset
+-	Generally perform the best 
+o	In proteomics, regularized expectation maximization and least-squares adaptive algorithms were most accurate and robust
+-	Must make assumption that genes/proteins are regulated dependently and that highly correlated expression behaviors are normally observed with coregulated genes/proteins
+-	2 steps – select “close” peptides and then impute target peptide by weighted combination of the neighboring peptides
+-	Many different approaches
+o	K nearest neighbors – weighted average intensity of K most similar peptides
+o	Local least squares – least-squares estimation of multiple regression based on K similar peptides
+o	Least squares adaptive – weight average of peptidewise and saplewise estimation with the most correlated peptides
+o	Regularized expectation maximization – iterative process of linear regression with ridge regression
+o	Model based imputation – random selection based on censoring probability from ANOVA model parameters
+
+Global Structure Approaches
+-	Probabilistic principal component analysis – missing values and PCA are viewed as model aparemeters which implemented as maximum liklehood estimates of the model paremters via and EM algorithm
+-	Bayesion principal component analysis – above but uses a Bayesian estimation to fit a PPCA model (high processing intensive)
+
+Best Article I found 
+https://pubs.acs.org/doi/abs/10.1021/pr501138h

@@ -4,25 +4,24 @@ Files associated with data science workshops at the U. of Washington-Seattle
 
 # This week
 
-#### Tuesday July 7, 2-3:30PM
+#### Tuesday July 21, 2-3:30PM
 
-* Imputation and NA-inflated (aka sparse) data
-  - Group discussion
+* Automating repetitive processes with `for` loops
+    - Live coding lead by Kim
 
-**Prior to attending** please find 1 article / workflow / tutorial related to the topic and be ready to discuss. Post to Slack channel
-  - When is imputation needed? 
-  - What do you need in order to get valid imputation values?
-  - Applications in proteomics
-  - What are alternatives to imputation for sparse data?
+**Prior to attending** please 
+  - Download the clean PRKAG2 data from Dropbox (`prkag2.clean.csv`)
   
 # Up-coming topics
 
-* 2020.07.14: LDheatmap
-* 2020.07.21: Code review of mediation script
-* 2020.07.28: TBD
+* 2020.07.28: Mediation analysis in R
+* 2020.08.04: Code review of mediation script
+* 2020.08.11: TBD
 
 # Past workshops
 
+* 2020.07.14: LDheatmap R package
+* 2020.07.07: Imputation and NA-inflated data discussion (no video)
 * 2020.06.30: Best practices for custom R functions
 * 2020.06.09: Rmarkdown documents and slides
 * 2020.06.02: Model building discussion

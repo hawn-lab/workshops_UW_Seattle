@@ -4,22 +4,24 @@ Files associated with data science workshops at the U. of Washington-Seattle
 
 # This week
 
-#### Tuesday July 21, 2-3:30PM
+#### Tuesday July 28, 2-3:30PM
 
-* Automating repetitive processes with `for` loops
-    - Live coding lead by Kim
+* Mediation analysis in R
+  - Discuss applications to our data
+  - Brief walkthrough R package `mediation`
 
 **Prior to attending** please 
-  - Download the clean PRKAG2 data from Dropbox (`prkag2.clean.csv`)
+  - Consider where and how you would use mediation analysis in your work
+  - Install `mediation` package in R
   
 # Up-coming topics
 
-* 2020.07.28: Mediation analysis in R
 * 2020.08.04: Code review of mediation script
 * 2020.08.11: TBD
 
 # Past workshops
 
+* 2020.07.21: Linear model and plotting `for` loops
 * 2020.07.14: LDheatmap R package
 * 2020.07.07: Imputation and NA-inflated data discussion (no video)
 * 2020.06.30: Best practices for custom R functions

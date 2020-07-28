@@ -1,0 +1,31 @@
+# Mediation analysis in R
+
+How much of the effect of A on B is mediated/explained by C?
+
+A ---> B
+ \    ^
+  v  /
+   C
+   
+## Outputs
+
+* ACME= average causal mediation effects
+    - indirect effect of A on B that is explained by C
+* ADE = average direct effects
+    - direct effect A on B when controlling for C
+* Total Effect 
+    - direct + indirect (e.g. ACM + ADE)
+* Proportion Mediated 
+    - proportion of effect of A on B that goes through C (e.g. ACME / total effect)
+
+## Recommendations and cautions
+
+* Be sure of the modeled directionality
+* Only test specific hypotheses, not every combo
+* Best to only test when A--->B is significant
+* Be wary of the P-values - effect size is more important
+
+## Recommended tutorials
+
+https://towardsdatascience.com/doing-and-reporting-your-first-mediation-analysis-in-r-2fe423b92171
+

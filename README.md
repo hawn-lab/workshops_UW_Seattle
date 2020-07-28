@@ -4,23 +4,23 @@ Files associated with data science workshops at the U. of Washington-Seattle
 
 # This week
 
-#### Tuesday July 28, 2-3:30PM
+#### Tuesday Aug 4, 2-3:30PM
 
-* Mediation analysis in R
-  - Discuss applications to our data
-  - Brief walkthrough R package `mediation`
+* Code review of mediation scripts
+  - Live collaborative coding to combine and improve Max and Kim's mediation scripts
+  - Orginal scripts can be found the mediation analysis directory (con't from last week)
 
-**Prior to attending** please 
-  - Consider where and how you would use mediation analysis in your work
-  - Install `mediation` package in R
+**Prior to attending please**
+  - Review the `mediation` package in R
+  - Recommended review <https://towardsdatascience.com/doing-and-reporting-your-first-mediation-analysis-in-r-2fe423b92171>
   
 # Up-coming topics
 
-* 2020.08.04: Code review of mediation script
 * 2020.08.11: TBD
 
 # Past workshops
 
+* 2020.07.28: Mediation analysis in R (no video)
 * 2020.07.21: Linear model and plotting `for` loops
 * 2020.07.14: LDheatmap R package
 * 2020.07.07: Imputation and NA-inflated data discussion (no video)

@@ -1,0 +1,34 @@
+# Mediation scripts
+
+- Vignette at https://cran.r-project.org/web/packages/mediation/vignettes/mediation.pdf
+- Other intro https://towardsdatascience.com/doing-and-reporting-your-first-mediation-analysis-in-r-2fe423b92171
+
+# Kim's script
+
++ Flexible independent and dependent variables
+- One variable set at a time
++ Simple, automatic triangle plot
++ Single table results
+
+
+# Max's script
+
++ Loop through multiple mediators
++ Flexible independent and dependent variable
++ Flexible model and use of contrasts
++ Coefficient plots for more complex triangle plot
+- No automatic triangle plot
+
+# Goal combined script
+
+1. Main script calling others depending on different types of models 
+2. Option to create triangle and/or coefficient plots
+3. Individual model scripts for
+	- Simple lm
+	- Added co-variates
+	- Block by patient
+	- Interaction term
+	- Contrasts
+	- Other?
+
+Find the most up-to-date function at https://github.com/kdillmcfarland/mediation.fxn

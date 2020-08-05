@@ -4,22 +4,22 @@ Files associated with data science workshops at the U. of Washington-Seattle
 
 # This week
 
-#### Tuesday Aug 4, 2-3:30PM
+#### Tuesday Aug 11, 2-3:30PM
 
-* Code review of mediation scripts
-  - Live collaborative coding to combine and improve Max and Kim's mediation scripts
-  - Orginal scripts can be found the mediation analysis directory (con't from last week)
-
-**Prior to attending please**
-  - Review the `mediation` package in R
-  - Recommended review <https://towardsdatascience.com/doing-and-reporting-your-first-mediation-analysis-in-r-2fe423b92171>
+* Multiple comparison correction and FDR
+    - Group discussion of best practices
+    
+**Priot to attending, please**
+    - Share any materials on this topic that you find helpful (here or on our Slack)
   
 # Up-coming topics
 
-* 2020.08.11: TBD
+* 2020.08.18: TBD
 
 # Past workshops
 
+* 2020.08.04: Brief overview of mediation scripts
+    - On-going script development at <https://github.com/kdillmcfarland/mediation.fxn>
 * 2020.07.28: Mediation analysis in R (no video)
 * 2020.07.21: Linear model and plotting `for` loops
 * 2020.07.14: LDheatmap R package

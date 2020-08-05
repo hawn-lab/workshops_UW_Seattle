@@ -9,7 +9,7 @@ Files associated with data science workshops at the U. of Washington-Seattle
 * Multiple comparison correction and FDR
     - Group discussion of best practices
     
-**Priot to attending, please**
+**Prior to attending, please**
     - Share any materials on this topic that you find helpful (here or on our Slack)
   
 # Up-coming topics
@@ -30,7 +30,7 @@ Files associated with data science workshops at the U. of Washington-Seattle
   - 06.02: How to build a statistical model
   - 06.16: Interaction terms vs contrasts matrix vs delta
 * 2020.05.26: Loops and apply functions in R
-* 2020.05.12: Libear models
+* 2020.05.12: Linear models
   - 05.12: ANOVA and linear regression
   - 05.19: General linear models
 * 2020.04.28: Intro to Amazon Web Services (AWS)

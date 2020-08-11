@@ -4,20 +4,18 @@ Files associated with data science workshops at the U. of Washington-Seattle
 
 # This week
 
-#### Tuesday Aug 11, 2-3:30PM
+#### Tuesday Aug 18, 2-3:30PM
 
-* Multiple comparison correction and FDR
-    - Group discussion of best practices
-    
-**Prior to attending, please**
-    - Share any materials on this topic that you find helpful (here or on our Slack)
-  
+* Follow-up on FDR
+* Discuss next topics
+
 # Up-coming topics
 
-* 2020.08.18: TBD
+* 2020.08.25: TBD
 
 # Past workshops
 
+* 2020.08.11: Multiple comparison correction and FDR
 * 2020.08.04: Brief overview of mediation scripts
     - On-going script development at <https://github.com/kdillmcfarland/mediation.fxn>
 * 2020.07.28: Mediation analysis in R (no video)

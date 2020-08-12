@@ -14,38 +14,72 @@ aka q-values
 
 ## Methods
 
-- Simple but harsh: Bonferroni multiples the p-value by the number of tests being run
-- Complex but more forgiving: Benjamini-Hochberg 
---- 1. ranks p-values from smallest to largest
---- 2. calculates a critical value based on each p-value's rank, total tests, and specified FDR cutoff
---- 3. compare actual p-values to critical value. all p-values ranked below the highest rank where the critical value < p-value are considered significant at the specified FDR cutoff
+Simple but harsh:
+- Bonferroni multiples the p-value by the number of tests being run
+
+Complex but more forgiving
+- Benjamini-Hochberg 
+--- uses rank relative to total tests and a pre-defined significance cutoff
+--- assumes that tests are INDEPENDENT
 --- so common that it is often just called "fdr"
---- this is preferred for analyses with 100s+ of comparisons
+- Benjamini-Yekutieli 
+--- similar to BH but assumes tests are DEPENDENT
 
 ## What to include in the correction
-### Within 1  model?
+### For 1 model, 1 outcome
 
 y ~ A + B
 
-- if A and B are independent, FDR correct across all A p-values separately from all B p-values
-- if A and B are dependent, FDR correct across all A and B p-values together
---- and consider if A and B should be in the same model if they are dependent
+- No FDR correction necessary since you are running 1 test
 
-- so including dependent co-variates potentially "hurts" the FDR correction of your variable(s) of interest
---- but if the model is a better fit or if those co-variates are standard in the field, it's a necessary trade-off
+### For 1 model, multiple outcomes
 
-- Our consensus: Include all relevant co-variates, FDR correct across all variables that are inter-dependent, and then change your FDR threshold after as needed
---- honesty of reported FDR cutoff vs "hidden" if only correcting across variables of interest and reporting lower FDR cutoff
+y1 ~ A + B
+y2 ~ A + B
 
-### Across multiple models?
+- If y1 and y2 are independent, then you don't need to FDR correct as there are no dependent multiple comparisons
+--- In a concrete example, say you're testing how age (A) and sex (B) impact height (y1) and hair length (y2). Since height is not related to hair length, these are separate tests entirely, hence no FDR issues
+--- Sometimes people will FDR correct in this case anyway because they are not 100% confident that the y-variables are fully independent. In this case, see below
+
+- If y1 and y2 are dependent (like RNA-seq)
+- AND A and B are dependent, correct using BY across all A and B p-values
+- AND A and B are independent, correct using BH across A and B p-values separately
+
+### Multiple models, 1 outcome
 
 y ~ A
-y ~ A * B
+y ~ B
 
-- If running multiple models to pick the better one, correct within each model and keep the "best" one
-- If a nested approach (e.g. take significant genes from variable A in model1 and run only those genes from variable A*B in model2)
---- Do you FDR correct across all A + A*B? More strict than 2 separate models. Defeats the purpose of the nest
---- If A and B are independent, FDR correct in each variable subset (A only, A in model with B, B, A:B)
+- If A and B are dependent, correct with BY across the 2 p-values
+- If A and B are independent, correct with BH across the 2 p-values
+
+y ~ A1 + A2
+y ~ B1 + B2
+
+- If any A variable is dependent to any B variable OR any variables within the same model are dependent, correct with BY across 4 p-values
+- If As are independent from Bs AND variables within the same model are independent, correct with BH across 4 p-values
+
+### Nested models, 1 outcome
+
+y ~ A
+y ~ A*B
+y ~ A+B
+
+- determine which model is the best fit, and use that as your 1 model
+
+### Nested models, multiple outcomes
+
+y1 ~ A
+y2 ~ A
+...
+Only use y significant for A in next model
+y1 ~ A*B
+y2 ~ A*B
+
+Concrete example: genes significant for media vs TB then tested for TB*RSTR interaction
+
+- Our consensus: Following the above rules, FDR correct within the A alone model separately from the interaction model
+- Consider not FDR correcting the A alone model to ensure all possible hits make it into the interaction model?
 
 ## Multiple hypothesis testing
 ### Specified contrasts within lm

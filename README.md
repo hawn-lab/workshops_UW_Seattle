@@ -4,14 +4,13 @@ Files associated with data science workshops at the U. of Washington-Seattle
 
 # This week
 
-#### Tuesday Aug 18, 2-3:30PM
-
-* Follow-up on FDR
-* Discuss next topics
+#### On break until Sept 2020
 
 # Up-coming topics
 
-* 2020.08.25: TBD
+* GSEA and ViSEAGO
+* Shiny apps
+* Network analysis
 
 # Past workshops
 

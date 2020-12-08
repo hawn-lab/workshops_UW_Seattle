@@ -522,7 +522,7 @@ Our data cleaning code continuously overwrites the `geno` object every time we c
 
 `f(x) %>% g(y)` is the same as `g(f(x),y)`
 
-`select(geno, snpID)` is the same as `genp %>% select(snpID)`
+`select(geno, snpID)` is the same as `geno %>% select(snpID)`
 
 Let's return to our `snp` and perform all the above wrangling in 1 piped function. Note how I've added comments within the function to aid the reader.
 

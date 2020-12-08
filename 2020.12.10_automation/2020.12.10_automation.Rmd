@@ -4,12 +4,12 @@ subtitle: "R-Ladies Vancouver workshop"
 author: "Kim Dill-McFarland, kadm@uw.edu"
 date: "version `r format(Sys.time(), '%B %d, %Y')`"
 output:
-  pdf_document:
-    toc: yes
   html_document:
     toc: yes
     toc_float:
       collapsed: no
+  pdf_document:
+    toc: yes
 editor_options:
   chunk_output_type: console
 ---
@@ -23,7 +23,8 @@ Dr. Kim Dill-McFarland has been teaching data science since her graduate years, 
 #### Workshop details
 
 Dec 10th, 2020 at 6pm  
-<https://www.meetup.com/rladies-vancouver/events/274737624/>
+<https://www.meetup.com/rladies-vancouver/events/274737624/>  
+Notes at <https://github.com/hawn-lab/workshops_UW_Seattle/tree/master/2020.12.10_automation>
 
 #### Prior to the workshop
 
@@ -157,7 +158,7 @@ In our loop, we can use `apply` to change multiple mm columns to cm. Since we're
 dat.filter.cm <- apply(dat.filter, MARGIN = 2, function(x) x/10)
 ```
 
-We get an error here because `apply` is tying to divide all columns by 10 and we have non-numeric data in columns like 'species'. So, we must specify the columns. If you wanted to transform all columns, you wouldn't need to modify the above.
+We get an error here because `apply` is tying to divide all columns by 10 and we have non-numeric data like 'species'. So, we must specify the columns we want to modify. If you wanted to transform all columns, you wouldn't need to modify the above.
 
 ```{r}
 # Using index numbers
@@ -177,7 +178,7 @@ This takes two short lines of code for step 2 and replaces with 1 longer line. T
 # The tidyverse
 ## Syntax
 
-The tidyverse (<https://www.tidyverse.org/>) is a suite of packages for data manipulation and plotting. Its function `mutate` can be used to accomplish many of the same things as `apply`. This is not quite as fast as `apply`, but as you'll see below, the tidyverse has some other features that make its use worthwhile in our loop.
+The tidyverse (<https://www.tidyverse.org/>) is a suite of packages for data manipulation and plotting. Its function `mutate` can be used to accomplish many of the same things as `apply`. This is not quite as fast as `apply`, but as you'll see below, the tidyverse's pipe function allows us to further clean-up our code.
 
 Though we will not use all of these in this workshop, here is a list of some commonly used tidyverse functions.
 
@@ -191,7 +192,7 @@ Though we will not use all of these in this workshop, here is a list of some com
 
 ## `mutate` multiple variables
 
-As the name implies, `mutate` changes variables. You can modify one at a time like so.
+As the name implies, `mutate` changes variables. You can modify one at a time like so, and we see the new column at the end of the data frame.
 
 ```{r}
 #Convert bill length to cm
@@ -201,12 +202,14 @@ dat.mutate <- mutate(dat.filter, bill_length_cm = bill_length_mm/10)
 colnames(dat.mutate)
 ```
 
-In our case, we want to mutate multiple columns and we can do this with a single line of code! Using the `across( )` modifier, we tell R to mutate both bill measurements. The `~` denotes a function with `.x` being a placeholder for the variables being altered by that function.
+In our case, we want to mutate multiple columns. Similar to our base R method, we could do this with multiple `mutate` functions. However, we can also do this with a single line of code by using the `across( )` modifier which tells `mutate` to change multiple columns at once (similar to `apply`). 
+
+Not that the `~` denotes a function with `.x` being a placeholder for the variables being altered by that function.
 
 ```{r}
 #Convert bill length AND depth to cm
-dat.mutate <- mutate(dat.filter, across(c(bill_length_mm, bill_depth_mm), 
-                                 .fns = ~.x/10))
+dat.mutate <- mutate(dat.filter, across(c(bill_length_mm, bill_depth_mm),
+                                        .fns = ~.x/10))
 
 #list columns in mutated data
 colnames(dat.mutate)
@@ -234,7 +237,7 @@ These variable names are not particularly beautiful but since we're not saving t
 
 ## More tidyverse functions
 
-As mentioned above, you can use `apply` or `mutate` for many of the same things. In our code, using the tidyverse is helpful because we also have a filter in step 1 that can be combined with mutate using a pipe (`%>%`). This is beyond the scope of this workshop but here's an example of how the loop would look with pipes.
+As mentioned above, you can use `apply` or `mutate` for many of the same things. In our code, using the tidyverse is helpful because we also have a `filter` in step 1 that can be combined with `mutate` using a pipe (`%>%`). This is beyond the scope of this workshop but here's an example of how the loop would look with pipes.
 
 ```{r eval=FALSE}
 #Make 3 by 2 grid for 6 plots
@@ -291,7 +294,7 @@ for(penguin.species in unique(dat$species)){
 # `foreach` loops
 ## Syntax
 
-`foreach` loops are very similar to `for` loops except they can run in parallel. This means if your single `for` loop takes 10 minutes, it will take about 5 minutes if you run it in `foreach` on 2 processors. 
+`foreach` loops are very similar to `for` loops except they can run in parallel. This means if your single `for` loop takes 10 minutes, it will take about 5 minutes to run with `foreach` on 2 processors. 
 
 First, we tell R how many processors it can use. It is important to not use all of your processors and to keep in mind how much RAM each processor needs. R is a RAM hog, so it is easy to accidentally crash R when you run in parallel. The data in this workshop are very small so that's not a concern today. But let's just run on 2 processors as an example.
 
@@ -311,9 +314,9 @@ foreach(something = something.else) %dopar% {
 
 Let's turn our first `for` loop into a parallel `foreach` loop. 
 
-Because we are working with plots, we cannot simply switch out the `for` syntax with `foreach`. This is because `foreach` does not play well with RStudio's 'Plots' pane and base R graphics are difficult to save as R objects. The easiest solution to this is to save the plots to your computer, as shown below.
+Because we are working with plots, we cannot simply switch out the `for` syntax with `foreach`. This is because `foreach` does not play well with RStudio's 'Plots' pane. The easiest solution to this is to save the plots to your computer, as shown below.
 
-Of note, if our loop output was a data frame or matrix, the `foreach` loop would save each processor's output in a list object in your main R environment.
+Of note, if our loop output was a data frame or matrix, this issue would not arise and the `foreach` loop would save each processor's output in a list object in your main R environment.
 
 ```{r}
 foreach(i = unique(dat$species)) %dopar% {
@@ -342,7 +345,7 @@ foreach(i = unique(dat$species)) %dopar% {
 
 If you spend time reading on the subject, you'll come across some very strong arguments against loops. This is because they are slow. Despite this, though, I've found them to be very useful in my work. If you're doing a couple 1000 or fewer processes, it is unlikely that you will reach time scales that will effect your life overmuch. I have a lot of loop scripts that take minutes to hours and I don't feel the need to further optimize them - I love an excuse for a tea break!
 
-That being said, if you use loops, it is important to put effort into optimizing the code within the loop. For example, the nested `for` loop at the end of this workshop takes longer to run than the single loops with `apply` or `mutate` in them. Thus, if you can leverage `apply`/`mutate` (or other specialized R functions) to accomplish your task, that will be faster. 
+That being said, if you use loops, it is important to put effort into optimizing the code within the loop. For example, the nested `for` loop at the end of this workshop takes longer to run than the single loops with `apply` or `mutate` in them. Thus, if you can leverage `apply`/`mutate` (or other specialized R functions) to accomplish your task, that will generally be faster. 
 
 #### How do I choose when to `apply` vs `mutate`?
 
@@ -356,7 +359,7 @@ Mostly, this comes down to personal style so don't worry if how you code somethi
 
 #### Where can I learn more?
 
-- Dr. Pat Schloss explores intro to advanced R topics on Riffomonas, particularly his on-going Code Club which  talked about for loops last week (<https://www.riffomonas.org/code_club/>)
+- Dr. Pat Schloss explores intro to advanced R topics on Riffomonas, particularly his on-going Code Club which talked about `for` loops last week (<https://www.riffomonas.org/code_club/>)
 - Software Carpentry has lessons in R, Git, command line, and other data science areas (<https://software-carpentry.org/>). A lesson on loops is at <http://swcarpentry.github.io/r-novice-inflammation/15-supp-loops-in-depth/index.html>
 
 # R session

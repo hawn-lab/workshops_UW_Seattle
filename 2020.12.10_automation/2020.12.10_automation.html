@@ -274,7 +274,7 @@ div.tocify {
 <h1 class="title toc-ignore">Automating tasks in R to streamline your workflow</h1>
 <h3 class="subtitle">R-Ladies Vancouver workshop</h3>
 <h4 class="author">Kim Dill-McFarland, <a href="mailto:kadm@uw.edu" class="email">kadm@uw.edu</a></h4>
-<h4 class="date">version December 07, 2020</h4>
+<h4 class="date">version December 08, 2020</h4>
 
 </div>
 
@@ -286,7 +286,8 @@ div.tocify {
 <div id="workshop-details" class="section level4">
 <h4>Workshop details</h4>
 <p>Dec 10th, 2020 at 6pm<br />
-<a href="https://www.meetup.com/rladies-vancouver/events/274737624/" class="uri">https://www.meetup.com/rladies-vancouver/events/274737624/</a></p>
+<a href="https://www.meetup.com/rladies-vancouver/events/274737624/" class="uri">https://www.meetup.com/rladies-vancouver/events/274737624/</a><br />
+Notes at <a href="https://github.com/hawn-lab/workshops_UW_Seattle/tree/master/2020.12.10_automation" class="uri">https://github.com/hawn-lab/workshops_UW_Seattle/tree/master/2020.12.10_automation</a></p>
 </div>
 <div id="prior-to-the-workshop" class="section level4">
 <h4>Prior to the workshop</h4>
@@ -434,7 +435,7 @@ for(i in unique(dat$species)){
 <p>In our loop, we can use <code>apply</code> to change multiple mm columns to cm. Since we’re working on columns, we use <code>apply</code> with <code>MARGIN = 2</code>. Note that we are working with <code>dat.filter</code> because that is what will be used within the loop at this step.</p>
 <pre class="r"><code>dat.filter.cm &lt;- apply(dat.filter, MARGIN = 2, function(x) x/10)</code></pre>
 <pre><code>## Error in x/10: non-numeric argument to binary operator</code></pre>
-<p>We get an error here because <code>apply</code> is tying to divide all columns by 10 and we have non-numeric data in columns like ‘species’. So, we must specify the columns. If you wanted to transform all columns, you wouldn’t need to modify the above.</p>
+<p>We get an error here because <code>apply</code> is tying to divide all columns by 10 and we have non-numeric data like ‘species’. So, we must specify the columns we want to modify. If you wanted to transform all columns, you wouldn’t need to modify the above.</p>
 <pre class="r"><code># Using index numbers
 ## shorter code but more likely to result in errors if you&#39;re not careful
 dat.filter.cm &lt;- apply(dat.filter[c(3,4)], 
@@ -451,7 +452,7 @@ dat.filter.cm &lt;- apply(dat.filter[c(&quot;bill_length_mm&quot;,&quot;bill_dep
 <h1>The tidyverse</h1>
 <div id="syntax-2" class="section level2">
 <h2>Syntax</h2>
-<p>The tidyverse (<a href="https://www.tidyverse.org/" class="uri">https://www.tidyverse.org/</a>) is a suite of packages for data manipulation and plotting. Its function <code>mutate</code> can be used to accomplish many of the same things as <code>apply</code>. This is not quite as fast as <code>apply</code>, but as you’ll see below, the tidyverse has some other features that make its use worthwhile in our loop.</p>
+<p>The tidyverse (<a href="https://www.tidyverse.org/" class="uri">https://www.tidyverse.org/</a>) is a suite of packages for data manipulation and plotting. Its function <code>mutate</code> can be used to accomplish many of the same things as <code>apply</code>. This is not quite as fast as <code>apply</code>, but as you’ll see below, the tidyverse’s pipe function allows us to further clean-up our code.</p>
 <p>Though we will not use all of these in this workshop, here is a list of some commonly used tidyverse functions.</p>
 <ul>
 <li><code>select</code> a subset of variables (columns)</li>
@@ -465,7 +466,7 @@ dat.filter.cm &lt;- apply(dat.filter[c(&quot;bill_length_mm&quot;,&quot;bill_dep
 </div>
 <div id="mutate-multiple-variables" class="section level2">
 <h2><code>mutate</code> multiple variables</h2>
-<p>As the name implies, <code>mutate</code> changes variables. You can modify one at a time like so.</p>
+<p>As the name implies, <code>mutate</code> changes variables. You can modify one at a time like so, and we see the new column at the end of the data frame.</p>
 <pre class="r"><code>#Convert bill length to cm
 dat.mutate &lt;- mutate(dat.filter, bill_length_cm = bill_length_mm/10)
 
@@ -474,10 +475,11 @@ colnames(dat.mutate)</code></pre>
 <pre><code>## [1] &quot;species&quot;           &quot;island&quot;            &quot;bill_length_mm&quot;   
 ## [4] &quot;bill_depth_mm&quot;     &quot;flipper_length_mm&quot; &quot;body_mass_g&quot;      
 ## [7] &quot;sex&quot;               &quot;year&quot;              &quot;bill_length_cm&quot;</code></pre>
-<p>In our case, we want to mutate multiple columns and we can do this with a single line of code! Using the <code>across( )</code> modifier, we tell R to mutate both bill measurements. The <code>~</code> denotes a function with <code>.x</code> being a placeholder for the variables being altered by that function.</p>
+<p>In our case, we want to mutate multiple columns. Similar to our base R method, we could do this with multiple <code>mutate</code> functions. However, we can also do this with a single line of code by using the <code>across( )</code> modifier which tells <code>mutate</code> to change multiple columns at once (similar to <code>apply</code>).</p>
+<p>Not that the <code>~</code> denotes a function with <code>.x</code> being a placeholder for the variables being altered by that function.</p>
 <pre class="r"><code>#Convert bill length AND depth to cm
-dat.mutate &lt;- mutate(dat.filter, across(c(bill_length_mm, bill_depth_mm), 
-                                 .fns = ~.x/10))
+dat.mutate &lt;- mutate(dat.filter, across(c(bill_length_mm, bill_depth_mm),
+                                        .fns = ~.x/10))
 
 #list columns in mutated data
 colnames(dat.mutate)</code></pre>
@@ -504,7 +506,7 @@ colnames(dat.mutate)</code></pre>
 </div>
 <div id="more-tidyverse-functions" class="section level2">
 <h2>More tidyverse functions</h2>
-<p>As mentioned above, you can use <code>apply</code> or <code>mutate</code> for many of the same things. In our code, using the tidyverse is helpful because we also have a filter in step 1 that can be combined with mutate using a pipe (<code>%&gt;%</code>). This is beyond the scope of this workshop but here’s an example of how the loop would look with pipes.</p>
+<p>As mentioned above, you can use <code>apply</code> or <code>mutate</code> for many of the same things. In our code, using the tidyverse is helpful because we also have a <code>filter</code> in step 1 that can be combined with <code>mutate</code> using a pipe (<code>%&gt;%</code>). This is beyond the scope of this workshop but here’s an example of how the loop would look with pipes.</p>
 <pre class="r"><code>#Make 3 by 2 grid for 6 plots
 par(mfrow=c(3,2))
 
@@ -557,7 +559,7 @@ for(penguin.species in unique(dat$species)){
 <h1><code>foreach</code> loops</h1>
 <div id="syntax-3" class="section level2">
 <h2>Syntax</h2>
-<p><code>foreach</code> loops are very similar to <code>for</code> loops except they can run in parallel. This means if your single <code>for</code> loop takes 10 minutes, it will take about 5 minutes if you run it in <code>foreach</code> on 2 processors.</p>
+<p><code>foreach</code> loops are very similar to <code>for</code> loops except they can run in parallel. This means if your single <code>for</code> loop takes 10 minutes, it will take about 5 minutes to run with <code>foreach</code> on 2 processors.</p>
 <p>First, we tell R how many processors it can use. It is important to not use all of your processors and to keep in mind how much RAM each processor needs. R is a RAM hog, so it is easy to accidentally crash R when you run in parallel. The data in this workshop are very small so that’s not a concern today. But let’s just run on 2 processors as an example.</p>
 <pre class="r"><code>registerDoParallel(cores=2)</code></pre>
 <p>Then the <code>foreach</code> loop is setup as</p>
@@ -568,8 +570,8 @@ for(penguin.species in unique(dat$species)){
 <div id="using-foreach" class="section level2">
 <h2>Using <code>foreach</code></h2>
 <p>Let’s turn our first <code>for</code> loop into a parallel <code>foreach</code> loop.</p>
-<p>Because we are working with plots, we cannot simply switch out the <code>for</code> syntax with <code>foreach</code>. This is because <code>foreach</code> does not play well with RStudio’s ‘Plots’ pane and base R graphics are difficult to save as R objects. The easiest solution to this is to save the plots to your computer, as shown below.</p>
-<p>Of note, if our loop output was a data frame or matrix, the <code>foreach</code> loop would save each processor’s output in a list object in your main R environment.</p>
+<p>Because we are working with plots, we cannot simply switch out the <code>for</code> syntax with <code>foreach</code>. This is because <code>foreach</code> does not play well with RStudio’s ‘Plots’ pane. The easiest solution to this is to save the plots to your computer, as shown below.</p>
+<p>Of note, if our loop output was a data frame or matrix, this issue would not arise and the <code>foreach</code> loop would save each processor’s output in a list object in your main R environment.</p>
 <pre class="r"><code>foreach(i = unique(dat$species)) %dopar% {
   # Step 1: Filter data to the penguin species
   dat.filter &lt;- dat[dat$species == i, ]
@@ -607,7 +609,7 @@ for(penguin.species in unique(dat$species)){
 <div id="why-do-some-people-hate-for-loops" class="section level4">
 <h4>Why do some people hate <code>for</code> loops?</h4>
 <p>If you spend time reading on the subject, you’ll come across some very strong arguments against loops. This is because they are slow. Despite this, though, I’ve found them to be very useful in my work. If you’re doing a couple 1000 or fewer processes, it is unlikely that you will reach time scales that will effect your life overmuch. I have a lot of loop scripts that take minutes to hours and I don’t feel the need to further optimize them - I love an excuse for a tea break!</p>
-<p>That being said, if you use loops, it is important to put effort into optimizing the code within the loop. For example, the nested <code>for</code> loop at the end of this workshop takes longer to run than the single loops with <code>apply</code> or <code>mutate</code> in them. Thus, if you can leverage <code>apply</code>/<code>mutate</code> (or other specialized R functions) to accomplish your task, that will be faster.</p>
+<p>That being said, if you use loops, it is important to put effort into optimizing the code within the loop. For example, the nested <code>for</code> loop at the end of this workshop takes longer to run than the single loops with <code>apply</code> or <code>mutate</code> in them. Thus, if you can leverage <code>apply</code>/<code>mutate</code> (or other specialized R functions) to accomplish your task, that will generally be faster.</p>
 </div>
 <div id="how-do-i-choose-when-to-apply-vs-mutate" class="section level4">
 <h4>How do I choose when to <code>apply</code> vs <code>mutate</code>?</h4>
@@ -625,7 +627,7 @@ for(penguin.species in unique(dat$species)){
 <div id="where-can-i-learn-more" class="section level4">
 <h4>Where can I learn more?</h4>
 <ul>
-<li>Dr. Pat Schloss explores intro to advanced R topics on Riffomonas, particularly his on-going Code Club which talked about for loops last week (<a href="https://www.riffomonas.org/code_club/" class="uri">https://www.riffomonas.org/code_club/</a>)</li>
+<li>Dr. Pat Schloss explores intro to advanced R topics on Riffomonas, particularly his on-going Code Club which talked about <code>for</code> loops last week (<a href="https://www.riffomonas.org/code_club/" class="uri">https://www.riffomonas.org/code_club/</a>)</li>
 <li>Software Carpentry has lessons in R, Git, command line, and other data science areas (<a href="https://software-carpentry.org/" class="uri">https://software-carpentry.org/</a>). A lesson on loops is at <a href="http://swcarpentry.github.io/r-novice-inflammation/15-supp-loops-in-depth/index.html" class="uri">http://swcarpentry.github.io/r-novice-inflammation/15-supp-loops-in-depth/index.html</a></li>
 </ul>
 </div>

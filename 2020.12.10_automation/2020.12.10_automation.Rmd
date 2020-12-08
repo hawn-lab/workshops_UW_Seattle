@@ -14,6 +14,51 @@ editor_options:
   chunk_output_type: console
 ---
 
+# Introduction
+
+Do you look at your script and see the same code repeated but with one word changed? Do you wish your script could run thousands of tasks while you take a break? Or does your script already run all those tasks but take forever? In this workshop, we tackle some automation functions (`for`, `apply`, `mutate`) that will help you to streamline code and time to accomplish repetitive tasks in R.
+
+Dr. Kim Dill-McFarland has been teaching data science since her graduate years, including as a teaching fellow at the U. of British Columbia and as a Carpentries certified instructor. She absolutely loves R, using it every day at work as a bioinformatician at the U. of Washington and at home modeling her new kitten's weight gain. Kim strongly believes in open-source tools and the power coding can bring to scientists of all levels and disciplines.
+
+#### Workshop details
+
+Dec 10th, 2020 at 6pm  
+<https://www.meetup.com/rladies-vancouver/events/274737624/>
+
+#### Prior to the workshop
+
+- Install R <https://mirror.its.sfu.ca/mirror/CRAN/>
+- Install RStudio (choose the Desktop version) <https://www.rstudio.com/products/rstudio/download/#download>
+- Install tidyverse package with `install.packages("tidyverse")`
+- Install penguin data package with `install.packages("palmerpenguins")`
+- Install penguin data package with `install.packages("doParallel","foreach")`
+
+# Setup
+
+Open RStudio and create a new RScript (File > New File > R Script or Cmd/Crtl+Shift+N). Save the script on your computer. As we work during the workshop, save your code in this script and feel free to add notes by using `#`. See examples below.
+
+Load packages.
+
+```{r}
+# Notes can be added like this
+library(tidyverse) # or like this!
+library(palmerpenguins)
+library(doParallel)
+library(foreach)
+```
+
+Get data. More information on these data can be found at <https://github.com/allisonhorst/palmerpenguins>
+
+```{r}
+# Save data to object in environment
+dat <- penguins
+
+# View data
+dat
+```
+
+Here, we see that the data contain information on body size and sex of several penguin species. Our goal will be to change the bill mm measurements to cm and create plots of size by sex for each species.
+
 # R session
 
 ```{r}

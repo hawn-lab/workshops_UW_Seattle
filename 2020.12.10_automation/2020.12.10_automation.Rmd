@@ -4,12 +4,12 @@ subtitle: "R-Ladies Vancouver workshop"
 author: "Kim Dill-McFarland, kadm@uw.edu"
 date: "version `r format(Sys.time(), '%B %d, %Y')`"
 output:
+  pdf_document:
+    toc: yes
   html_document:
     toc: yes
     toc_float:
       collapsed: no
-  pdf_document:
-    toc: yes
 editor_options:
   chunk_output_type: console
 ---
@@ -359,7 +359,7 @@ Mostly, this comes down to personal style so don't worry if how you code somethi
 
 #### Where can I learn more?
 
-- Dr. Pat Schloss explores intro to advanced R topics on Riffomonas, particularly his on-going Code Club which talked about `for` loops last week (<https://www.riffomonas.org/code_club/>)
+- Dr. Pat Schloss explores intro to advanced R topics on Riffomonas, particularly his on-going Code Club (<https://www.riffomonas.org/code_club/>) which talked about `for` loops the last couple weeks, especially <https://www.youtube.com/watch?v=L2QsTX3q0vM&feature=youtu.be>
 - Software Carpentry has lessons in R, Git, command line, and other data science areas (<https://software-carpentry.org/>). A lesson on loops is at <http://swcarpentry.github.io/r-novice-inflammation/15-supp-loops-in-depth/index.html>
 
 # R session

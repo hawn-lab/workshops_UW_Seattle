@@ -2,10 +2,6 @@
 
 Files associated with data science workshops at the U. of Washington-Seattle
 
-# This week
-
-#### On break until Sept 2020
-
 # Up-coming topics
 
 * GSEA and ViSEAGO

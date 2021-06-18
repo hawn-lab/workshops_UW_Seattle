@@ -1,0 +1,241 @@
+---
+title: "Introduction to R and the tidyverse"
+subtitle: "Practice exercises"
+author: "Kim Dill-McFarland, <kadm@uw.edu>"
+date: "version `r format(Sys.time(), '%B %d, %Y')`"
+output:
+  pdf_document:
+    toc: yes
+  html_document:
+    toc: yes
+    toc_float:
+      collapsed: no
+editor_options:
+  chunk_output_type: console
+---
+```{r include=FALSE}
+knitr::opts_chunk$set(fig.width = 4, fig.height = 3)
+```
+
+# Overview
+
+These exercises will help you to practice tidyverse and other functions covered in the Intro R workshop including:
+
+* Subsetting
+* Filtering
+* Pivoting
+* Joining
+* Plotting
+
+# Setup
+
+Open the Intro R Rproject and start a new working script. Install any new packages, load packages, set a seed, and load data as we did in the workshop.
+
+```{r eval=FALSE}
+install.packages("broom")
+```
+
+```{r message=FALSE}
+library(tidyverse)
+library(broom)
+#Set seed
+set.seed(4389)
+
+#RNAseq expression and metadata
+load("data/RSTR_data_clean_subset.RData")
+```
+
+# Exercises
+### Subsetting
+
+Subset the `dat$targets` data frame to the rows and/or columns you need to answer the following questions. For several questions, you can just filter rows and look for the answer. However, many of our real data sets are too wide (too many variables) to do this, so please practice also selecting the column with the solution. 
+
+1. How many MEDIA samples are there?
+1. How many sequences (`lib.size`) does 89448-1-04 have in their TB sample?
+1. What are the maximum and minimum normalization factors (`norm.factors`) for MEDIA samples?
+1. Challenge: Checkout `group_by` with `summarise` to see how you can get summary statistics for multiple groups at once. For example, #1 and 3 can be calculated for MEDIA and TB simultaneously.
+
+### Pivoting 
+
+1. Without running the following code, sketch the resulting data frame structures. Once you've done this, check the outputs in R.
+
+```{r eval=FALSE}
+dat$targets %>% 
+  select(RSID, condition, lib.size) %>% 
+  pivot_wider(names_from=RSID, values_from=lib.size)
+```
+
+```{r eval=FALSE}
+dat$targets %>% 
+  pivot_longer(c(lib.size, norm.factors))
+```
+
+### Joining
+
+1. Using the sample information in `dat$targets` and a join function, relabel the samples in the expression data `dat$E` with `FULLIDNO` and `condition`. Note: You'll also need to employ a pivot!
+1. Use the following code to create two new data frames. 
+
+```{r eval=FALSE}
+df1 <- data.frame(donor = c("A","B","C"),
+                  age = c(10,14,4))
+
+df2 <- data.frame(donor = c("A","C","D"),
+                  sex = c("F","M","F"))
+```
+
+Then sketch what the resulting data frames would be from the following join functions before running them in R.
+
+```{r eval=FALSE}
+left_join(df1, df2, by = "donor")
+
+right_join(df1, df2, by = "donor")
+
+full_join(df1, df2, by = "donor")
+```
+
+### Plotting
+
+Using `dat$targets`,
+
+1. Create a dot plot of library size (`lib.size`) by normalization factor (`norm.factor`)
+1. Does there appear to be a linear relationship between library size and normalization? 
+  a. Add a linear fit to your plot with the new function `geom_smooth`. Remember to use help `?` when learning new functions.
+  b. Run the following code to assess if the linear fit is significant. This is an example of how the tidyverse can be piped directly into statistical models in base R. The `.` in our linear model `lm` is used as a place holder for the data frame piped in.
+
+```{r eval=FALSE}
+dat$targets %>% 
+  lm(norm.factors ~ lib.size , data=.) %>% 
+  tidy()
+```
+
+3. There are many way to represent data in plots, especially when you have more than a single x-y comparison. We saw one such way with facets, where we created multiple x-y comparisons in multiple plots. Another way to do this is to add additional layers to a single plot, like color or shape. Here, we see the faceted plot from the workshop. 
+
+```{r echo=FALSE, message=FALSE}
+dat.format <- as.data.frame(dat$E) %>% 
+  #Move rownames to a column. Unlike before, let's name it 
+  #to match what we'll be joining with next
+  rownames_to_column("geneName") %>% 
+  #Join with gene key to get HGNC symbol
+  inner_join(dat$genes) %>% 
+  #filter IFNG and TNF expression
+  filter(hgnc_symbol %in% c("IFNG", "IFNA1")) %>% 
+  #Pivot to long format so can combine with metadata
+  pivot_longer(-c(geneName, hgnc_symbol:locus_group), 
+                names_to="libID", values_to="expression") %>% 
+  #join with library metadata
+  #Notice that you can nest function so that you never need to save the subset metadata
+  inner_join(select(.data = dat$targets, libID, FULLIDNO, RSID, condition)) %>% 
+  #select variables of interest. Note we need to keep hgnc_symbol to tell
+  #data from the two genes apart
+  select(libID, hgnc_symbol, expression, FULLIDNO, RSID, condition)
+```
+
+```{r echo=FALSE}
+dat.format %>% 
+  ggplot(aes(x=condition, y=expression)) +
+  #Create boxplots
+  ## Set the outlier shape to NULL so that you don't get duplicate
+  ## dots in the next layer.
+  geom_boxplot(outlier.shape=NULL) +
+  #Add points for each sample. Color by MEDIA/TB and "jitter" left 
+  # and right (width) to avoid overlap
+  geom_jitter(aes(color=condition), width = 0.2, height=0) +
+  #Format axis labels
+  labs(y="Normalized log2 expression", x="") + 
+  #Change theme to classic to remove grey background and other
+  #default aspects of ggplot
+  theme_classic() +
+  #Remove legend since it's redundant
+  theme(legend.position = "none") +
+  #Add facet
+  facet_wrap(~hgnc_symbol) 
+```
+
+To make an alternate plot with shapes for gene (`hgnc_symbol`) and colors for donor (`RSID`), modify the following code by filling in places marked with `[ SOMETHING ]`. For simplicity, you can use the following code from the workshop to make `dat.format` to use in plotting. The goal plot is also shown below.
+
+```{r eval=FALSE}
+dat.format <- as.data.frame(dat$E) %>% 
+  #Move rownames to a column. Unlike before, let's name it 
+  #to match what we'll be joining with next
+  rownames_to_column("geneName") %>% 
+  #Join with gene key to get HGNC symbol
+  inner_join(dat$genes) %>% 
+  #filter IFNG and TNF expression
+  filter(hgnc_symbol %in% c("IFNG", "IFNA1")) %>% 
+  #Pivot to long format so can combine with metadata
+  pivot_longer(-c(geneName, hgnc_symbol:locus_group), 
+                names_to="libID", values_to="expression") %>% 
+  #join with library metadata
+  #Notice that you can nest function so that you never need to save the subset metadata
+  inner_join(select(.data = dat$targets, libID, FULLIDNO, RSID, condition)) %>% 
+  #select variables of interest. Note we need to keep hgnc_symbol to tell
+  #data from the two genes apart
+  select(libID, hgnc_symbol, expression, FULLIDNO, RSID, condition)
+```
+
+```{r eval=FALSE}
+dat.format %>% 
+  ggplot(aes(x=[ SOMETHING ], y=expression)) +
+  #Create boxplots
+  ## Set the outlier shape to NULL so that you don't get duplicate
+  ## dots in the next layer.
+  geom_boxplot(outlier.shape=NA) +
+  #Add points for each sample. 
+  ## Color by donor, shape by gene
+  ## "jitter" left and right (width) to avoid overlap
+  geom_jitter(aes(shape=[ SOMETHING ], color=[ SOMETHING ]), width = 0.2, height=0) +
+  #Format axis labels
+  labs(y="Normalized log2 expression", x="",
+       shape="HGNC symbol") + 
+  #Change theme to classic to remove grey background and other
+  #default aspects of ggplot
+  theme_classic() +
+  #Make legend 2 columns
+  guides(color = guide_legend(ncol = 2))
+```
+
+```{r echo=FALSE}
+dat.format %>% 
+  ggplot(aes(x=condition, y=expression)) +
+  #Create boxplots
+  ## Set the outlier shape to NULL so that you don't get duplicate
+  ## dots in the next layer.
+  geom_boxplot(outlier.shape=NA) +
+  #Add points for each sample. 
+  ## Color by donor, shape by gene
+  ## "jitter" left and right (width) to avoid overlap
+  geom_jitter(aes(shape=hgnc_symbol, color=RSID), width = 0.2, height=0) +
+  #Format axis labels
+  labs(y="Normalized log2 expression", x="",
+       shape="HGNC symbol") + 
+  #Change theme to classic to remove grey background and other
+  #default aspects of ggplot
+  theme_classic() +
+  #Make legend 2 columns
+  guides(color = guide_legend(ncol = 2))
+```
+
+4. How interpretable is the alternate plot? Do you prefer the alternate or the original faceted plot? What happens if you switch the shape and color variables? These questions bring up some important considerations in figure generation, particularly for complex data. Making a good figure is not too difficult but making an excellent, compelling figure is extremely challenging. So, here are some guidelines to help.
+
+Within an image, humans generally perceive aspects in a defined and consistent order: outline, color, shape, size. Thus, you should consider the importance of each data feature and align that with what aspect of the plot you use.
+
+* outline: In ggplot, this is best accomplished with facets though you can consider white space is general as well. When the brain sees a box or white space around a subsection of a plot, it automatically assumes everything in the box is related and processes it accordingly. This is the first perceived aspect, because in the real world, it differentiates one object from another.
+
+* color: You may have noticed in the above plot that the shapes get lost behind all the different colors. This is because we tend to see color first. A lot of this has to due with our emotional and cultural connections to different colors. So if you have a single plot and want to highlight 1 variable, use color. Also consider your color choices including
+  - Are they color-blind safe?
+  - Can you tell all discrete colors apart?
+  - Do you need to color everything differently or use a single highlight color?
+  - Do they match cultural assumptions like high values being "hot" and low being "cool"?
+  - Are they appealing? Do you have an emotional response to them?
+
+* shape: Shape perception actually has a lot more to due with outline, color, and size than the shape itself. For example, consider an open circle, closed circle, and closed triangle. You can more easily tell the open and closed circles apart than the closed circle and triangle. This is because open vs closed is actually a difference in color! Similarly, a closed circle versus a plus sign are easy to differentiate because their outlines are so different. So, in choosing shapes, consider how different they are and try to limit the number used.
+
+* size: Large differences in size are easy to discern but subtle differences are difficult. Arguably if there are large differences, color or shape should be used with large, medium, and small groups. Small differences are likely better as a color gradient. If you must use size, uniform shapes are more easily compared (circle, square, diamond) than irregular (triangle, plus).
+
+# R session
+
+```{r}
+sessionInfo()
+```
+
+***

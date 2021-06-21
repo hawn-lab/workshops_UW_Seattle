@@ -4,12 +4,12 @@ subtitle: "RSTR-seq edition"
 author: "Kim Dill-McFarland, <kadm@uw.edu>"
 date: "version `r format(Sys.time(), '%B %d, %Y')`"
 output:
+  pdf_document:
+    toc: yes
   html_document:
     toc: yes
     toc_float:
       collapsed: no
-  pdf_document:
-    toc: yes
 editor_options:
   chunk_output_type: console
 ---
@@ -125,7 +125,7 @@ set.seed(4389)
 
 Create a directory called `data` and move the 2 data files into this directory.
 
-## Loading data into an R
+## Loading data into R
 ## Data frames from `.csv`, `.tsv`, etc.
 
 One of R's most essential data structures is the data frame, which is simply a table of `m` columns by `n` rows. First, we will read in the RNA-seq metadata into RStudio using the base R `read.table` function.

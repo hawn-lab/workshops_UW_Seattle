@@ -249,7 +249,7 @@ div.tocify {
 <h1 class="title toc-ignore">Introduction to R and the tidyverse</h1>
 <h3 class="subtitle">RSTR-seq edition</h3>
 <h4 class="author">Kim Dill-McFarland, <a href="mailto:kadm@uw.edu" class="email">kadm@uw.edu</a></h4>
-<h4 class="date">version June 18, 2021</h4>
+<h4 class="date">version June 21, 2021</h4>
 
 </div>
 
@@ -549,14 +549,10 @@ meta[logical.vector, ]</code></pre>
 <div id="exercises-part-1" class="section level1">
 <h1>Exercises: Part 1</h1>
 <ol style="list-style-type: decimal">
-<li>Install <code>tidyverse</code> and <code>limma</code> packages.</li>
-</ol>
-<p><em>Please note that if you have <strong>R v3.3 or older</strong>, you may not be able to install <code>tidyverse</code>. In this case, you need to separately install each package within the tidyverse. This includes:</em> <code>readr</code>, <code>tibble</code>, <code>dplyr</code>, <code>tidyr</code>, <code>stringr</code>, <code>ggplot2</code>, <code>purr</code>, <code>forcats</code></p>
-<ol start="2" style="list-style-type: decimal">
 <li>Using help to identify the necessary arguments for the log function, compute the natural logarithm of 4, base 2 logarithm of 4, and base 4 logarithm of 4.</li>
 </ol>
 <p>Using the <code>meta</code> data frame:</p>
-<ol start="3" style="list-style-type: decimal">
+<ol start="2" style="list-style-type: decimal">
 <li>Using an R function, determine what data type the <code>norm.factors</code> variable is.</li>
 <li>Using indexing and the square bracket operator <code>[]</code>:
 <ul>
@@ -568,7 +564,7 @@ meta[logical.vector, ]</code></pre>
 </div>
 <div id="rstr-seq-analysis-example" class="section level1">
 <h1>RSTR-seq analysis example</h1>
-<p>The next section will be a targeted analysis of INFG expression in MEDIA vs TB samples. In the process, we will cover some (but not all) functions in the <code>tidyverse</code>.</p>
+<p>The next section will be a targeted analysis of IFNG expression in MEDIA vs TB samples. In the process, we will cover some (but not all) functions in the <code>tidyverse</code>.</p>
 <p>Currently, our data are</p>
 <p><code>meta</code>: metadata information including library size, patient ID, and TB condition. Rows are sequencing libraries</p>
 <pre><code>##            libID lib.size norm.factors   FULLIDNO     RSID condition

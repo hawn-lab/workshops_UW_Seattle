@@ -4,12 +4,12 @@ subtitle: "RSTR-seq edition"
 author: "Kim Dill-McFarland, <kadm@uw.edu>"
 date: "version `r format(Sys.time(), '%B %d, %Y')`"
 output:
-  pdf_document:
-    toc: yes
   html_document:
     toc: yes
     toc_float:
       collapsed: no
+  pdf_document:
+    toc: yes
 editor_options:
   chunk_output_type: console
 ---
@@ -310,23 +310,19 @@ Statement | Meaning
 
 # Exercises: Part 1
 
-1. Install `tidyverse` and `limma` packages.
-
-*Please note that if you have __R v3.3 or older__, you may not be able to install `tidyverse`. In this case, you need to separately install each package within the tidyverse. This includes:* `readr`, `tibble`, `dplyr`, `tidyr`, `stringr`, `ggplot2`, `purr`, `forcats`
-
-2. Using help to identify the necessary arguments for the log function, compute the natural logarithm of 4, base 2 logarithm of 4, and base 4 logarithm of 4.
+1. Using help to identify the necessary arguments for the log function, compute the natural logarithm of 4, base 2 logarithm of 4, and base 4 logarithm of 4.
 
 Using the `meta` data frame:
 
-3. Using an R function, determine what data type the `norm.factors` variable is.
-4. Using indexing and the square bracket operator `[]`:
+2. Using an R function, determine what data type the `norm.factors` variable is.
+3. Using indexing and the square bracket operator `[]`:
     - determine what `RSID` value occurs in the 20th row
     - return the cell where `lib.size` equals 14509963
-5. Subset the data to observations where `RSID` equals "RS102521" or "RS102484". *Hint*: Use a logical vector. 
+4. Subset the data to observations where `RSID` equals "RS102521" or "RS102484". *Hint*: Use a logical vector. 
 
 # RSTR-seq analysis example
 
-The next section will be a targeted analysis of INFG expression in MEDIA vs TB samples. In the process, we will cover some (but not all) functions in the `tidyverse`.
+The next section will be a targeted analysis of IFNG expression in MEDIA vs TB samples. In the process, we will cover some (but not all) functions in the `tidyverse`.
 
 Currently, our data are
 

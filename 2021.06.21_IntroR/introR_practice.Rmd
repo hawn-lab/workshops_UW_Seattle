@@ -4,12 +4,12 @@ subtitle: "Practice exercises"
 author: "Kim Dill-McFarland, <kadm@uw.edu>"
 date: "version `r format(Sys.time(), '%B %d, %Y')`"
 output:
-  pdf_document:
-    toc: yes
   html_document:
     toc: yes
     toc_float:
       collapsed: no
+  pdf_document:
+    toc: yes
 editor_options:
   chunk_output_type: console
 ---
@@ -37,6 +37,7 @@ install.packages("broom")
 
 ```{r message=FALSE}
 library(tidyverse)
+library(limma)
 library(broom)
 #Set seed
 set.seed(4389)
@@ -46,7 +47,37 @@ load("data/RSTR_data_clean_subset.RData")
 ```
 
 # Exercises
-### Subsetting
+## Day 1: Base R
+### Project setup
+
+1. What are the benefits of storing data in `RData` versus tables (`csv`, `tsv`, etc)?
+1. Imagine a hypothetical project with the following data and results. How would you choose to setup your Rproject directory and sub-directories? This is something that may evolve over time, but it is helpful to start with a defined structure to make it easier for you and others to find things.
+    - `.RData` file containing all cleaned data for the project
+    - 2 `.csv` of raw RNAseq counts and sample metadata (what was cleaned to make the `.RData`)
+    - 4 `.csv` with linear model results
+    - 25 `.png` plots of gene expression, individual genes
+    - 1 `.png` plot of gene expression, faceted with many genes
+    - 2 `.R` scripts, 1 for linear modeling and 1 for making plots
+    - 1 `.Rmd` report summarizing and interpreting the results
+    
+### Data types
+
+1. What is the difference between a `character` and `facter`?
+1. What data type does R classify the date `2021.06`? What about `2021/06`? If it is not classified as a "date", how could this impact downstream analyses? Try to predict the outcomes before checking in R. 
+    - Challenge: Checkout the package `lubridate` for functions to effectively work with dates in R.
+1. You have an `S3` list object named `myData`and it contains 2 data frames named `A` and `B`. Within `B` there is a column named `variable1`. How do you access this variable?
+
+### Subsetting and filtering
+
+Using `dat`:
+
+1. What is the mean library size `lib.size`? 
+1. Try running `summary(dat$targets)`. What kinds of data does it provide? Why are the results different for different variables?
+1. How many libraries have a library size `lib.size` greater than 5 million and a normalization factor `norm.factors` less than 1?
+1. Challenge: Using the function `grepl`, how many libraries are from a donor with an `RSID` that starts with "RS1025"?
+
+## Day 2: R tidyverse
+### Subsetting and filtering
 
 Subset the `dat$targets` data frame to the rows and/or columns you need to answer the following questions. For several questions, you can just filter rows and look for the answer. However, many of our real data sets are too wide (too many variables) to do this, so please practice also selecting the column with the solution. 
 

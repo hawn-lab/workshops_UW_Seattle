@@ -249,7 +249,7 @@ div.tocify {
 <h1 class="title toc-ignore">Introduction to R and the tidyverse</h1>
 <h3 class="subtitle">Practice exercises</h3>
 <h4 class="author">Kim Dill-McFarland, <a href="mailto:kadm@uw.edu" class="email">kadm@uw.edu</a></h4>
-<h4 class="date">version June 18, 2021</h4>
+<h4 class="date">version June 21, 2021</h4>
 
 </div>
 
@@ -270,6 +270,7 @@ div.tocify {
 <p>Open the Intro R Rproject and start a new working script. Install any new packages, load packages, set a seed, and load data as we did in the workshop.</p>
 <pre class="r"><code>install.packages(&quot;broom&quot;)</code></pre>
 <pre class="r"><code>library(tidyverse)
+library(limma)
 library(broom)
 #Set seed
 set.seed(4389)
@@ -279,8 +280,50 @@ load(&quot;data/RSTR_data_clean_subset.RData&quot;)</code></pre>
 </div>
 <div id="exercises" class="section level1">
 <h1>Exercises</h1>
-<div id="subsetting" class="section level3">
-<h3>Subsetting</h3>
+<div id="day-1-base-r" class="section level2">
+<h2>Day 1: Base R</h2>
+<div id="project-setup" class="section level3">
+<h3>Project setup</h3>
+<ol style="list-style-type: decimal">
+<li>What are the benefits of storing data in <code>RData</code> versus tables (<code>csv</code>, <code>tsv</code>, etc)?</li>
+<li>Imagine a hypothetical project with the following data and results. How would you choose to setup your Rproject directory and sub-directories? This is something that may evolve over time, but it is helpful to start with a defined structure to make it easier for you and others to find things.
+<ul>
+<li><code>.RData</code> file containing all cleaned data for the project</li>
+<li>2 <code>.csv</code> of raw RNAseq counts and sample metadata (what was cleaned to make the <code>.RData</code>)</li>
+<li>4 <code>.csv</code> with linear model results</li>
+<li>25 <code>.png</code> plots of gene expression, individual genes</li>
+<li>1 <code>.png</code> plot of gene expression, faceted with many genes</li>
+<li>2 <code>.R</code> scripts, 1 for linear modeling and 1 for making plots</li>
+<li>1 <code>.Rmd</code> report summarizing and interpreting the results</li>
+</ul></li>
+</ol>
+</div>
+<div id="data-types" class="section level3">
+<h3>Data types</h3>
+<ol style="list-style-type: decimal">
+<li>What is the difference between a <code>character</code> and <code>facter</code>?</li>
+<li>What data type does R classify the date <code>2021.06</code>? What about <code>2021/06</code>? If it is not classified as a “date”, how could this impact downstream analyses? Try to predict the outcomes before checking in R.
+<ul>
+<li>Challenge: Checkout the package <code>lubridate</code> for functions to effectively work with dates in R.</li>
+</ul></li>
+<li>You have an <code>S3</code> list object named <code>myData</code>and it contains 2 data frames named <code>A</code> and <code>B</code>. Within <code>B</code> there is a column named <code>variable1</code>. How do you access this variable?</li>
+</ol>
+</div>
+<div id="subsetting-and-filtering" class="section level3">
+<h3>Subsetting and filtering</h3>
+<p>Using <code>dat</code>:</p>
+<ol style="list-style-type: decimal">
+<li>What is the mean library size <code>lib.size</code>?</li>
+<li>Try running <code>summary(dat$targets)</code>. What kinds of data does it provide? Why are the results different for different variables?</li>
+<li>How many libraries have a library size <code>lib.size</code> greater than 5 million and a normalization factor <code>norm.factors</code> less than 1?</li>
+<li>Challenge: Using the function <code>grepl</code>, how many libraries are from a donor with an <code>RSID</code> that starts with “RS1025”?</li>
+</ol>
+</div>
+</div>
+<div id="day-2-r-tidyverse" class="section level2">
+<h2>Day 2: R tidyverse</h2>
+<div id="subsetting-and-filtering-1" class="section level3">
+<h3>Subsetting and filtering</h3>
 <p>Subset the <code>dat$targets</code> data frame to the rows and/or columns you need to answer the following questions. For several questions, you can just filter rows and look for the answer. However, many of our real data sets are too wide (too many variables) to do this, so please practice also selecting the column with the solution.</p>
 <ol style="list-style-type: decimal">
 <li>How many MEDIA samples are there?</li>
@@ -392,6 +435,7 @@ full_join(df1, df2, by = &quot;donor&quot;)</code></pre>
 </ul>
 </div>
 </div>
+</div>
 <div id="r-session" class="section level1">
 <h1>R session</h1>
 <pre class="r"><code>sessionInfo()</code></pre>
@@ -410,7 +454,7 @@ full_join(df1, df2, by = &quot;donor&quot;)</code></pre>
 ## [1] stats     graphics  grDevices utils     datasets  methods   base     
 ## 
 ## other attached packages:
-##  [1] limma_3.44.3    broom_0.7.6     forcats_0.5.1   stringr_1.4.0  
+##  [1] broom_0.7.6     limma_3.44.3    forcats_0.5.1   stringr_1.4.0  
 ##  [5] dplyr_1.0.6     purrr_0.3.4     readr_1.4.0     tidyr_1.1.3    
 ##  [9] tibble_3.1.2    ggplot2_3.3.3   tidyverse_1.3.1
 ## 

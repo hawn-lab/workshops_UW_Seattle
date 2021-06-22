@@ -153,10 +153,14 @@ meta[20,"RSID"]
 meta$RSID[20]
 
 # return the cell where lib.size equals 14509963
+#There are no rows where this is TRUE
 meta[meta$lib.size == 14509963, ]
-
+#But if we input a value that is in the data frame
 meta[meta$lib.size == meta$lib.size[1], ]
-meta[meta$lib.size == 4575023, ]
+#OR explicitly
+meta[meta$lib.size == 4575022.579, ]
+## FOR THOSE IN THE LIVE WORKSHOP ##
+# The issue we were having was that R rounded the values to whole numbers 
 
 # Subset the data to observations where RSID equals “RS102521” or “RS102484”
 meta[meta$RSID %in% c("RS102521","RS102484"), ]

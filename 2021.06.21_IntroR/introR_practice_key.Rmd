@@ -1,0 +1,482 @@
+---
+title: "Introduction to R and the tidyverse"
+subtitle: "Practice exercises - Answer key"
+author: "Kim Dill-McFarland, <kadm@uw.edu>"
+date: "version `r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:
+    toc: yes
+    toc_float:
+      collapsed: no
+  pdf_document:
+    toc: yes
+editor_options:
+  chunk_output_type: console
+---
+```{r include=FALSE}
+knitr::opts_chunk$set(fig.width = 4, fig.height = 3)
+```
+
+# Overview
+
+These exercises will help you to practice tidyverse and other functions covered in the Intro R workshop including:
+
+* Subsetting
+* Filtering
+* Pivoting
+* Joining
+* Plotting
+
+# Setup
+
+Open the Intro R Rproject and start a new working script. Install any new packages, load packages, set a seed, and load data as we did in the workshop.
+
+```{r eval=FALSE}
+install.packages("broom")
+```
+
+```{r message=FALSE}
+library(tidyverse)
+library(limma)
+library(broom)
+#Set seed
+set.seed(4389)
+
+#RNAseq expression and metadata
+load("data/RSTR_data_clean_subset.RData")
+```
+
+# Exercises
+## Day 1: Base R
+### Project setup
+
+1. What are the benefits of storing data in `RData` versus tables (`csv`, `tsv`, etc)?
+
+* Several tables can be stored in a single object and can be loaded together in R with a single `load()` command
+* Data are automatically compressed so they take up less hard-drive space
+* Data formats are preserved in R such as factors, numbers you want to treat as characters, etc
+
+2. Imagine a hypothetical project with the following data and results. How would you choose to setup your Rproject directory and sub-directories? This is something that may evolve over time, but it is helpful to start with a defined structure to make it easier for you and others to find things.
+    - `.RData` file containing all cleaned data for the project
+    - 2 `.csv` of raw RNAseq counts and sample metadata (what was cleaned to make the `.RData`)
+    - 4 `.csv` with linear model results
+    - 25 `.png` plots of gene expression, individual genes
+    - 1 `.png` plot of gene expression, faceted with many genes
+    - 2 `.R` scripts, 1 for linear modeling and 1 for making plots
+    - 1 `.Rmd` report summarizing and interpreting the results
+    
+    
+There are many options for this! I would do the following. Note that I personally like to use a lot of sub-directories.
+
+```
+project_name/
+    data_clean/
+        .RData
+    data_raw/
+        2 data .csv
+    figs/
+        genes/
+            25 individual gene plot .png
+        1 facetd gene plot .png
+    results/
+        4 linear model .csv
+    scripts/
+        2 .R scripts
+    .Rmd
+```
+
+Another option.
+
+```
+project_name/
+    data/
+        .RData
+        2 data .csv
+    results/
+        models/
+            4 linear model .csv
+        figs/
+            25 individual gene plot .png
+            1 facetd gene plot .png
+    2 .R scripts
+    .Rmd
+```
+
+### Data types
+
+1. What is the difference between a `character` and `factor`?
+
+* A character is any combination of alphanumeric (A-Z, 0-9) and other symbols (_ . - etc) that R treats like a single word. These are analogous to categorical variables in statistics. So for example, we have a variable with data on "MEDIA" vs "TB" in the workshop data set
+* A factor is a character variable with some additional formatting. Factors have defined levels in a defined order. If you try to add data not of one of the defined levels, it is seen as an `NA` or missing. 
+
+For example, we could format our MEDIA/TB variable to a factor
+
+```{r}
+factor(dat$targets$condition)
+```
+
+and force TB to be the first level even though it is the second alphabetically
+
+```{r}
+factor(dat$targets$condition, levels=c("TB","MEDIA"))
+```
+
+And if we only allow TB as a level, we can see the how R replaces everything else with `NA`
+
+```{r}
+factor(dat$targets$condition, levels=c("TB"))
+```
+
+2. What data type does R classify the date `2021.06`? What about `2021/06`? If it is not classified as a "date", how could this impact downstream analyses? Try to predict the outcomes before checking in R. 
+
+* Both are treated as numeric. The first as a number with 2 decimal digits and the second as the result of 2021 divided by 6
+
+```{r}
+2021.06
+class(2021.06)
+
+2021/06
+class(2021/06)
+```
+
+* This could dramatically impact results if these data were actually dates because 1) they are not being treated the same even though they are the same date, 2) scales will be wrong (as in 2021.06 is one month apart from 2021.07 but will be treated at 0.01 apart), 3) some functions that require a date won't run on a numeric, and other issues
+
+
+2. Challenge: Checkout the package `lubridate` for functions to effectively work with dates in R.
+
+* You can force date formatting like so and it is a lot more intuitive that base R's `as.Date()`. Here, you simply list which date components you have for year (y), month (m), and day (d) in the order they are in. That function does the rest!
+
+```{r message=FALSE}
+library(lubridate)
+
+ym("2021.06")
+ym("2021/06")
+
+#And if we had a day
+ymd("2021.06.2")
+#A different order
+mdy("06.2.2021")
+```
+
+* <https://lubridate.tidyverse.org/> has more on the `lubridate` package
+
+3. You have an `S3` list object named `myData`and it contains 2 data frames named `A` and `B`. Within `B` there is a column named `variable1`. How do you access this variable?
+
+```{r eval=FALSE}
+myData$B$variable1
+```
+
+### Subsetting and filtering
+
+Using `dat`:
+
+1. What is the mean library size `lib.size`? 
+
+```{r}
+mean(dat$targets$lib.size)
+```
+
+2. Try running `summary(dat$targets)`. What kinds of data does it provide? Why are the results different for different variables?
+
+```{r}
+summary(dat$targets)
+```
+
+* You will get min, max, mean, and quartiles for numeric data
+* You get the class and length of character vectors
+* R automatically detects the data type and provides as much info as it can. Since character variables are simply words, this class has the least summary info.
+
+3. How many libraries have a library size `lib.size` greater than 5 million and a normalization factor `norm.factors` less than 1?
+
+```{r}
+size.logical <- dat$targets$lib.size > 5E6
+norm.logical <- dat$targets$norm.factors < 1
+
+dat$targets[size.logical & norm.logical, ]
+
+#Or combine it all together
+dat$targets[dat$targets$lib.size > 5E6 & dat$targets$norm.factors < 1, ]
+
+#And bonus, you can make R count the rows for you
+nrow(dat$targets[size.logical & norm.logical, ])
+```
+
+4. Challenge: Using the function `grepl`, how many libraries are from a donor with an `RSID` that starts with "RS1025"?
+
+```{r}
+dat$targets[grepl("^RS1025", dat$targets$RSID), ]
+```
+
+* Note that `^` means the start of and `$` means the end of in a regular expression (regex) used in `grepl`
+
+## Day 2: R tidyverse
+### Subsetting and filtering
+
+Subset the `dat$targets` data frame to the rows and/or columns you need to answer the following questions. For several questions, you can just filter rows and look for the answer. However, many of our real data sets are too wide (too many variables) to do this, so please practice also selecting the column with the solution. 
+
+1. How many MEDIA samples are there?
+
+```{r}
+dat$targets %>% 
+  filter(condition == "MEDIA") %>% 
+  nrow()
+```
+
+2. How many sequences (`lib.size`) does 89448-1-04 have in their TB sample?
+
+```{r}
+dat$targets %>% 
+  filter(FULLIDNO =="89448-1-04" & condition == "TB") %>% 
+  select(lib.size)
+```
+
+3. What are the maximum and minimum normalization factors (`norm.factors`) for MEDIA samples?
+
+```{r}
+dat$targets %>% 
+  filter(condition == "MEDIA") %>% 
+  select(norm.factors) %>% 
+  max()
+
+dat$targets %>% 
+  filter(condition == "MEDIA") %>% 
+  select(norm.factors) %>% 
+  min()
+```
+
+4. Challenge: Checkout `group_by` with `summarise` to see how you can get summary statistics for multiple groups at once. For example, #1 and 3 can be calculated for MEDIA and TB simultaneously.
+
+```{r}
+dat$targets %>% 
+  group_by(condition) %>% 
+  summarise(min.norm = min(norm.factors),
+            max.norm = max(norm.factors))
+```
+
+### Pivoting 
+
+1. Without running the following code, sketch the resulting data frame structures. Once you've done this, check the outputs in R.
+
+```{r}
+dat$targets %>% 
+  select(RSID, condition, lib.size) %>% 
+  pivot_wider(names_from=RSID, values_from=lib.size)
+```
+
+```{r}
+dat$targets %>% 
+  pivot_longer(c(lib.size, norm.factors))
+```
+
+### Joining
+
+1. Using the sample information in `dat$targets` and a join function, relabel the samples in the expression data `dat$E` with `FULLIDNO` and `condition`. Note: You'll also need to employ a pivot!
+
+```{r}
+as.data.frame(dat$E) %>% 
+  #Move rownames into a data column named geneName
+  rownames_to_column("geneName") %>% 
+  #move expression data into 1 column for libID and 1 for all the values
+  pivot_longer(-geneName, names_to = "libID") %>% 
+  #Join with metadata
+  inner_join(dat$targets)  %>% 
+  #Make a new variable to rename the columns with.
+  ##By calling it "name", our later pivot with automatically recognize it
+  mutate(name = paste(FULLIDNO, condition, sep="_")) %>% 
+  #Keep only the data we want
+  select(geneName, name, value) %>% 
+  #Return to wider format
+  pivot_wider()
+```
+
+2. Use the following code to create two new data frames. 
+
+```{r}
+df1 <- data.frame(donor = c("A","B","C"),
+                  age = c(10,14,4))
+
+df2 <- data.frame(donor = c("A","C","D"),
+                  sex = c("F","M","F"))
+```
+
+Then sketch what the resulting data frames would be from the following join functions before running them in R.
+
+```{r}
+left_join(df1, df2, by = "donor")
+
+right_join(df1, df2, by = "donor")
+
+full_join(df1, df2, by = "donor")
+```
+
+### Plotting
+
+Using `dat$targets`,
+
+1. Create a dot plot of library size (`lib.size`) by normalization factor (`norm.factors`)
+
+```{r}
+dat$targets %>% 
+  ggplot(aes(x=lib.size, y=norm.factors)) +
+  geom_point()
+```
+
+2. Does there appear to be a linear relationship between library size and normalization? 
+  a. Add a linear fit to your plot with the new function `geom_smooth`. Remember to use help `?` when learning new functions.
+  
+```{r}
+dat$targets %>% 
+  ggplot(aes(x=lib.size, y=norm.factors)) +
+  geom_point() +
+  geom_smooth(method="lm")
+```
+  
+  b. Run the following code to assess if the linear fit is significant. This is an example of how the tidyverse can be piped directly into statistical models in base R. The `.` in our linear model `lm` is used as a place holder for the data frame piped in.
+
+```{r}
+dat$targets %>% 
+  lm(norm.factors ~ lib.size , data=.) %>% 
+  tidy()
+```
+
+3. There are many way to represent data in plots, especially when you have more than a single x-y comparison. We saw one such way with facets, where we created multiple x-y comparisons in multiple plots. Another way to do this is to add additional layers to a single plot, like color or shape. Here, we see the faceted plot from the workshop. 
+
+```{r echo=FALSE, message=FALSE}
+dat.format <- as.data.frame(dat$E) %>% 
+  #Move rownames to a column. Unlike before, let's name it 
+  #to match what we'll be joining with next
+  rownames_to_column("geneName") %>% 
+  #Join with gene key to get HGNC symbol
+  inner_join(dat$genes) %>% 
+  #filter IFNG and TNF expression
+  filter(hgnc_symbol %in% c("IFNG", "IFNA1")) %>% 
+  #Pivot to long format so can combine with metadata
+  pivot_longer(-c(geneName, hgnc_symbol:locus_group), 
+                names_to="libID", values_to="expression") %>% 
+  #join with library metadata
+  #Notice that you can nest function so that you never need to save the subset metadata
+  inner_join(select(.data = dat$targets, libID, FULLIDNO, RSID, condition)) %>% 
+  #select variables of interest. Note we need to keep hgnc_symbol to tell
+  #data from the two genes apart
+  select(libID, hgnc_symbol, expression, FULLIDNO, RSID, condition)
+```
+
+```{r echo=FALSE}
+dat.format %>% 
+  ggplot(aes(x=condition, y=expression)) +
+  #Create boxplots
+  ## Set the outlier shape to NULL so that you don't get duplicate
+  ## dots in the next layer.
+  geom_boxplot(outlier.shape=NULL) +
+  #Add points for each sample. Color by MEDIA/TB and "jitter" left 
+  # and right (width) to avoid overlap
+  geom_jitter(aes(color=condition), width = 0.2, height=0) +
+  #Format axis labels
+  labs(y="Normalized log2 expression", x="") + 
+  #Change theme to classic to remove grey background and other
+  #default aspects of ggplot
+  theme_classic() +
+  #Remove legend since it's redundant
+  theme(legend.position = "none") +
+  #Add facet
+  facet_wrap(~hgnc_symbol) 
+```
+
+To make an alternate plot with shapes for gene (`hgnc_symbol`) and colors for donor (`RSID`), modify the following code by filling in places marked with `[ SOMETHING ]`. For simplicity, you can use the following code from the workshop to make `dat.format` to use in plotting. The goal plot is also shown below.
+
+```{r}
+dat.format <- as.data.frame(dat$E) %>% 
+  #Move rownames to a column. Unlike before, let's name it 
+  #to match what we'll be joining with next
+  rownames_to_column("geneName") %>% 
+  #Join with gene key to get HGNC symbol
+  inner_join(dat$genes) %>% 
+  #filter IFNG and TNF expression
+  filter(hgnc_symbol %in% c("IFNG", "IFNA1")) %>% 
+  #Pivot to long format so can combine with metadata
+  pivot_longer(-c(geneName, hgnc_symbol:locus_group), 
+                names_to="libID", values_to="expression") %>% 
+  #join with library metadata
+  #Notice that you can nest function so that you never need to save the subset metadata
+  inner_join(select(.data = dat$targets, libID, FULLIDNO, RSID, condition)) %>% 
+  #select variables of interest. Note we need to keep hgnc_symbol to tell
+  #data from the two genes apart
+  select(libID, hgnc_symbol, expression, FULLIDNO, RSID, condition)
+```
+
+```{r}
+dat.format %>% 
+  ggplot(aes(x=condition, y=expression)) +
+  #Create boxplots
+  ## Set the outlier shape to NULL so that you don't get duplicate
+  ## dots in the next layer.
+  geom_boxplot(outlier.shape=NA) +
+  #Add points for each sample. 
+  ## Color by donor, shape by gene
+  ## "jitter" left and right (width) to avoid overlap
+  geom_jitter(aes(shape=hgnc_symbol, color=RSID), width = 0.2, height=0) +
+  #Format axis labels
+  labs(y="Normalized log2 expression", x="",
+       shape="HGNC symbol") + 
+  #Change theme to classic to remove grey background and other
+  #default aspects of ggplot
+  theme_classic() +
+  #Make legend 2 columns
+  guides(color = guide_legend(ncol = 2))
+```
+
+4. How interpretable is the alternate plot? Do you prefer the alternate or the original faceted plot? 
+
+* I find the alternate plot difficult to interpret because some of the colors are very close and the trends between circles vs triangles are overlapping.
+
+What happens if you switch the shape and color variables? 
+
+```{r fig.height=4}
+dat.format %>% 
+  ggplot(aes(x=condition, y=expression)) +
+  #Create boxplots
+  ## Set the outlier shape to NULL so that you don't get duplicate
+  ## dots in the next layer.
+  geom_boxplot(outlier.shape=NA) +
+  #Add points for each sample. 
+  ## Color by donor, shape by gene
+  ## "jitter" left and right (width) to avoid overlap
+  geom_jitter(aes(color=hgnc_symbol, shape=RSID), width = 0.2, height=0) +
+  #Format axis labels
+  labs(y="Normalized log2 expression", x="",
+       shape="HGNC symbol") + 
+  #Change theme to classic to remove grey background and other
+  #default aspects of ggplot
+  theme_classic() +
+  #Make legend 2 columns
+  guides(color = guide_legend(ncol = 2))
+```
+
+Note that R has a limit on the number of shapes it will allow. If you go beyond this, it will remove data without an assigned shape. You could force more by defining them in `scale_shape_manual` but this is not recommended. The 6 default shapes are a good limit on how many can be differentiated by eye. And even that is pushing it a little.
+
+However, you may notice that the use of color for the two genes makes it much easier to see trends like IFNG is more highly expressed than IFNA1.
+
+These questions bring up some important considerations in figure generation, particularly for complex data. Making a good figure is not too difficult but making an excellent, compelling figure is extremely challenging. So, here are some guidelines to help.
+
+Within an image, humans generally perceive aspects in a defined and consistent order: outline, color, shape, size. Thus, you should consider the importance of each data feature and align that with what aspect of the plot you use.
+
+* outline: In ggplot, this is best accomplished with facets though you can consider white space is general as well. When the brain sees a box or white space around a subsection of a plot, it automatically assumes everything in the box is related and processes it accordingly. This is the first perceived aspect, because in the real world, it differentiates one object from another.
+
+* color: You may have noticed in the above plot that the shapes get lost behind all the different colors. This is because we tend to see color first. A lot of this has to due with our emotional and cultural connections to different colors. So if you have a single plot and want to highlight 1 variable, use color. Also consider your color choices including
+  - Are they color-blind safe?
+  - Can you tell all discrete colors apart?
+  - Do you need to color everything differently or use a single highlight color?
+  - Do they match cultural assumptions like high values being "hot" and low being "cool"?
+  - Are they appealing? Do you have an emotional response to them?
+
+* shape: Shape perception actually has a lot more to due with outline, color, and size than the shape itself. For example, consider an open circle, closed circle, and closed triangle. You can more easily tell the open and closed circles apart than the closed circle and triangle. This is because open vs closed is actually a difference in color! Similarly, a closed circle versus a plus sign are easy to differentiate because their outlines are so different. So, in choosing shapes, consider how different they are and try to limit the number used.
+
+* size: Large differences in size are easy to discern but subtle differences are difficult. Arguably if there are large differences, color or shape should be used with large, medium, and small groups. Small differences are likely better as a color gradient. If you must use size, uniform shapes are more easily compared (circle, square, diamond) than irregular (triangle, plus).
+
+# R session
+
+```{r}
+sessionInfo()
+```
+
+***

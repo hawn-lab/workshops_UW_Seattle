@@ -1,0 +1,60 @@
+---
+title: "Gene set enrichment analysis"
+subtitle: "RNA-seq edition"
+author: "Kim Dill-McFarland, <kadm@uw.edu>"
+date: "version `r format(Sys.time(), '%B %d, %Y')`"
+output:
+  pdf_document:
+    toc: yes
+  html_document:
+    toc: yes
+    toc_float:
+      collapsed: no
+editor_options:
+  chunk_output_type: console
+---
+```{r include=FALSE}
+knitr::opts_chunk$set(fig.width = 3, fig.height = 3)
+```
+
+# Overview
+In this workshop, we introduce gene set analysis related to RNA-sequencing. In it, we cover:
+
+* Broad MSigDB gene sets
+* hypergeometric enrichment with `clusterProfiler`
+* gene set enrichment analysis (GSEA) with `fgsea`
+
+We will do all of our work in [RStudio](https://www.rstudio.com/). RStudio is an integrated development and analysis environment for R that brings a number of conveniences over using R in a terminal or other editing environments.
+
+During the workshop, we will build an R script together, which will be posted as 'live_notes' after the workshop [here](https://github.com/hawn-lab/workshops_UW_Seattle/tree/master/2021.07.14_GSEA).
+
+# Prior to the workshop
+Please [install R](http://www.r-project.org), [RStudio](https://www.rstudio.com/products/rstudio/download/), and the following packages. See the [setup instructions](notes/introR_setup.html) for more details.
+
+```{r eval=FALSE}
+library(tidyverse)
+library(org.Hs.eg.db)
+library(msigdbr)
+library(fgsea)
+```
+
+# Additional resources
+## Groups
+
+* [Rladies Seattle](https://www.meetup.com/rladies-seattle/) Not just for ladies! A pro-actively inclusive R community with both in-person and online workshops, hangouts, etc.
+* [TidyTuesday](https://github.com/rfordatascience/tidytuesday) A weekly plotting challenge
+* [R code club](https://www.riffomonas.org/code_club/) Dr. Pat Schloss opened his lab's coding club to remote participation. 
+* [Seattle useR Group](https://www.meetup.com/Seattle-useR/)
+
+## Online
+
+* [R cheatsheets](https://www.rstudio.com/resources/cheatsheets/) also available in RStudio under Help > Cheatsheets
+* [The Carpentries](https://carpentries.org/)
+
+# R session
+
+```{r}
+sessionInfo()
+```
+
+***

@@ -23,14 +23,14 @@ Automatically install only new packages with the following.
 
 ```{r eval=FALSE}
 #CRAN packages
-pcks <- c("tidyverse", "msigdbr", "fgsea", "BiocManager", "org.Hs.eg.db")
+pcks <- c("tidyverse", "msigdbr", "fgsea", "BiocManager")
 
 to.install <- pcks[!(pcks %in% installed.packages()[,"Package"])]
 
 if(length(to.install)) install.packages(to.install)
 
 #Bioconductor packages
-pcks <- c("org.Hs.eg.db")
+pcks <- c("clusterProfiler")
 
 to.install <- pcks[!(pcks %in% installed.packages()[,"Package"])]
 

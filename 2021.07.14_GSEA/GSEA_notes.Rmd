@@ -3,14 +3,15 @@ title: "Gene set enrichment analysis"
 author: "Kim Dill-McFarland, <kadm@uw.edu>"
 date: "version `r format(Sys.time(), '%B %d, %Y')`"
 output:
-  pdf_document:
-    toc: yes
   html_document:
     toc: yes
     toc_float:
       collapsed: no
+  pdf_document:
+    toc: yes
 editor_options:
   chunk_output_type: console
+urlcolor: blue
 ---
 ```{r include=FALSE}
 knitr::opts_chunk$set(fig.width = 8.5, fig.height = 3.5)
@@ -94,13 +95,25 @@ There are several other sets in MSigDB that are not described here. Some of thes
 
 In reality, we usually run all of Hallmark, canonical pathways, and biological process. Then, we consider how many significant gene sets each gives us, think further about the top hits, and perform additional analyses or experiments to see which will be highlighted in publication.
 
+## MSigDB in R
+
+We will access MSigDB from within R using the package `msigdbr`. It is important to update this package frequently as Broad continues to improve its gene set collections. 
+
+We can see the R version we have
+
+```{r}
+packageVersion("msigdbr")
+```
+
+And verify that it is up-to-date with the latest online versions at <https://www.gsea-msigdb.org/gsea/downloads.jsp>
+
 Next we will use gene sets to unravel how monocytes respond to *M. tuberculosis* infection.
 
 # Hypergeometric enrichment
 
 This analysis is a simple enrichment. We ask if our list of significant genes is enriched in gene sets more than random chance allows.
 
-### Get gene set data
+## Get gene set data
 
 First, we extract the lists of genes in Broad Hallmark terms from the package `msigdbr`. We format it as a data frame so we can use the `tidyverse`.
 
@@ -122,7 +135,7 @@ Here, we see the start of the Hallmark data including
 head(H)
 ```
 
-### Define significant genes
+## Define significant genes
 
 Next, we must define our "significant genes". This type of enrichment is binary in that it only considers if a gene is significant or not. There is no granularity beyond yes/no. Thus, it is very important to consider our FDR cutoff as it is an arbitrary value that can dramatically impact results. 
 
@@ -149,9 +162,9 @@ signif <- model.results %>%
   filter(FDR <= 1E-16)
 ```
 
-### Run enrichment
+## Run enrichment
 
-Now we can run the enrichment in `clusterProfiler`. We can use any gene ID in our dataset; it just has to match the gene IDs in the database.
+Now we can run the enrichment in `clusterProfiler`. We can use any gene ID in our data set; it just has to match the gene IDs in the database.
 
 Here, we run the enrichment using ENTREZ ID. Note that you must select ONLY the columns needed from the Hallmark database. `enricher( )` isn't smart enough to know which columns to use on its own.
 
@@ -182,7 +195,7 @@ length(signif.ensembl)
 length(signif.entrez)
 ```
 
-### Extract enrichment results
+## Extract enrichment results
 
 `clusterProfiler` outputs results in an S4 object. 
 
@@ -207,7 +220,7 @@ colnames(enrich.H@result)
 * GeneRatio: Significant genes in gene set / Significant genes in all gene sets tested
 * BgRatio: Total genes in gene set / Total genes in all gene sets tested
 * pvalue: Significance
-* p.adjust: FDR adjust significance
+* p.adjust: FDR adjusted significance
 * qvalue: Q-value used in P-value calculation
 * geneID: vector of significant gene IDs in gene set. Separated by /
 * Count: Significant genes in gene set
@@ -234,7 +247,7 @@ enrich.H.df <- enrich.H@result %>%
   mutate("k.K"=size.overlap.term/size.term)
 ```
 
-### Visualize significant enrichment
+## Visualize significant enrichment
 
 The most common visualization for enrichment is k/K as it is the ratio of significant genes relative to total genes in the gene set. We also subset to significant enrichment at a defined FDR. Here, let's use FDR < 0.05. This is actually pretty strict for enrichment and people often go up to FDR < 0.2.
 
@@ -284,23 +297,257 @@ C5.BP <- as.data.frame(msigdbr(species = "Homo sapiens",
 
 1. Run enrichment of the current significant gene list against the canonical pathways `C2.CP` database. Do you get more or fewer significant gene sets? Is this what you'd expect give what you know about C2?
 1. Run Hallmark enrichment on genes significant at FDR < 0.01. Do you get more or fewer significant gene sets? Why might this be the case?
-1. Further modify the final ggplot. Add color, change the FDR cutoff, do whatever your heart desires!
+1. Further modify the final enrichment ggplot. Add color, change the FDR cutoff, do whatever your heart desires!
 
 # Gene set enrichment analysis (GSEA)
 
+Gene set enrichment analysis (GSEA) is another way to use gene sets to understand changes in gene expression. The term GSEA sounds general, but it is understood in the field to specifically refer to the following type of analysis. We often clarify it as "fold change GSEA" in our group since it can be confused with the enrichment we performed above.
+
+GSEA compares expression in two biological states and determines if gene sets show significant, concordant change. That is, GSEA determines if genes in a set generally increase or decrease in expression. Some important differences between GSEA and simple enrichment are
+
+* GSEA uses data from all genes; enrichment uses only your defined significant genes. This means you don't have to worry about FDR cutoffs for picking genes to go into GSEA.
+
+* GSEA uses numeric fold change values; enrichment uses binary significant vs not. Thus, GSEA can identify pathways where lots of small changes not significant at the gene level add up to a significant change at the gene set level. However, since GSEA incorporates direction, you may miss gene sets where discordant changes result in similar biology. For example, an increase in an activator having the same effect as a decrease in a repressor.
+
+* GSEA uses mean fold change per gene; enrichment depends on how you defined significant genes (e.g. your model could have used individual values, means, etc). Thus, if you have lots of variation between samples, GSEA does not capture this and may give misleading results. If you suspect another factor has significant impacts on gene expression, you can run GSEA on subsets so that the mean values are more representative. For example, mean fold change in children separate from adults if age is an important factor.
+
+* GSEA compares only two states; enrichment can compare any number of states. This is similar to an ANOVA telling you there is a significant effect of variable X but needing a posthoc pairwise test to say if within that variable, A differs from B, B from C, etc. You can define significant genes in enrichment by the overall ANOVA or several pairwise lists. In contrast, GSEA only compares pairwise tests since it uses fold change. Often, when you have more than two states, the pairwise tests are more interpretable anyway.
+
+We usually run enrichment and GSEA on a data set and use both in interpreting results.
+
+## Get gene set data
+
+We use the same gene set data as with enrichment. As a reminder, this is extracted from `msigdbr` with
+
+```{r eval=FALSE}
+#Hallmark
+H <- as.data.frame(msigdbr(species = "Homo sapiens", 
+                           category = "H"))
+```
+
+However, `fgsea` needs the database as a list, not a data frame. There are many ways we can accomplish this. Here is one using the `tidyverse`. Remember to select the gene ID column that matches your fold change data!
+
+```{r}
+H.ensembl.ls <- H %>% 
+  #Keep gene ID that match expression data gene ID
+  select(gs_name, ensembl_gene) %>% 
+  #Collapse all genes in each gene set into 1 row each
+  group_by(gs_name) %>%
+  summarise(all.genes = list(unique(ensembl_gene))) %>%
+  #Convert to list
+  deframe()
+```
+
+## Calculate fold change
+
+GSEA compares mean gene expression fold change between two states. Thus, we calculate this from the expression data in `dat`. 
+
+If you are running this outside the live workshop, be sure to look at how the data frame changes with each step. To learn more about the `tidyverse` and how this is done, see [Intro R](https://github.com/hawn-lab/workshops_UW_Seattle/tree/master/2021.06.21_IntroR). 
+
+```{r}
+#Extract expression data
+FC <- as.data.frame(dat$E) %>% 
+  #Move gene IDs from rownames to a column
+  rownames_to_column("ensembl_gene_id") %>% 
+  #Make long format with all expression values in 1 column
+  pivot_longer(-ensembl_gene_id, 
+               names_to = "libID", values_to = "expression") %>% 
+  #Extract RSID and TB condition from libID
+  #If this info was not in the libID, we could get it by joining
+  # with dat$targets
+  separate(libID, into = c("RSID","condition"), sep="_") %>% 
+  #Make wide with media and tb expression in separate columns
+  pivot_wider(names_from = condition, values_from = expression) %>% 
+  #Calculate tb minus media fold change (delta for change)
+  #Because expression values are log2, subtraction is the same as division
+  mutate(delta = TB-MEDIA) %>% 
+  #Calculate mean fold change per gene
+  group_by(ensembl_gene_id) %>% 
+  summarise(mean.delta = mean(delta, na.rm=TRUE)) %>% 
+  #Arrange by descending fold change
+  arrange(desc(mean.delta))
+
+head(FC)
+```
+
+`fgsea` requires our fold changes to be in a decreasing, named vector (or list of vectors if you have multiple groups). So we format as a vector for our one group of TB-MEDIA fold changes.
+
+```{r}
+#Vector of mean fold change values
+FC.vec <- FC$mean.delta
+#Add names
+#Importantly, since both columns come from the same data frame,
+#we are confident that they are in the same order
+  names(FC.vec) <- FC$ensembl_gene_id
+```
+
+## Determine score type
+
+GSEA calculates significance differently if you have only positive (`pos`), only negative (`neg`), or mixed (`std`) fold change values. This is analogous to a one- vs two-tailed t-test. 
+
+We can set this by-hand by checking our minimum and maximum fold changes. We see we have positive and negative, thus our type is `std`.
+
+```{r}
+min(FC.vec)
+max(FC.vec)
+
+scoreType <- "std"
+```
+
+Or here is a function to automatically set this!
+
+```{r}
+if(min(FC.vec) < 0 & max(FC.vec) > 0){
+        scoreType <- "std"
+      } else if(max(FC.vec) <= 0){
+        scoreType <- "neg"
+      } else if(min(FC.vec) >= 0){
+        scoreType <- "pos"
+      } else{
+        stop("Could not determine score type from fold changes.")
+      }
+```
+
+
+## Run GSEA
+
+Using our formatted data, we run GSEA. We also set the number of permutations to run with `nperm`, which determines how many times the algorithm is run to estimate p-values. 
+
+```{r}
+gsea.H <- as.data.frame(fgseaSimple(pathways = H.ensembl.ls, 
+                                    stats = FC.vec,
+                                    nperm = 1000,
+                                    scoreType = scoreType))
+```
+
+You'll sometimes see a warning message about ties in the data, as seen above. This means some genes have the exact same fold change value. This can occur for several reasons including 1) rounding, 2) genes with multiple IDs in a database, and 3) true results where genes have the same fold change. It is not something to worry about as long as the percentage is low. Here, we have 0.22% (which equates to 32 out of 14,576 genes). If the percentage is high, check that your data are correct with 1 mean fold change value per gene.
+
+You may also see a warning like
+
+```
+There were X pathways for which P-values were not calculated properly due to unbalanced gene-level statistic values
+```
+
+This occurs when `nperm` is not large enough to accurately estimate very small p-values (like those zeros in the gene linear model results!) If you see this error, try increasing `nperm` by orders of 10. Keep in mind that more permutations  increase the time it takes to run GSEA. You may reach a point where it's no longer worth it and should just fill in these NA with zeroes.
+
+## Extract GSEA results
+
+GSEA outputs a data frame of results.
+
+```{r}
+class(gsea.H)
+```
+
+This includes
+
+```{r}
+colnames(gsea.H)
+```
+
+* pathway: Unique name for gene set
+* pval: Significance
+* padj: FDR adjusted significance
+* ES: Enrichment score (same as Broad's online GSEA program)
+* NES: Enrichment score normalized to mean enrichment of random samples of the same size
+* nMoreExtreme: Number of times a random gene set had a more extreme enrichment score value
+* size: Total genes in gene set also found in fold change data
+* leadingEdge: Leading edge genes that drive the enrichment, 
+
+## Visualize significant GSEA
+
+The most common visualization for GSEA is the enrichment or normalized enrichment score. Let's plot `NES` for the subset of significant GSEA at FDR < 0.05. This is actually pretty strict for GSEA and people often go up to FDR < 0.2.
+
+```{r fig.height=5, fig.width=6.5}
+gsea.H %>% 
+  filter(padj <= 0.05) %>% 
+  #Beautify descriptions by removing _ and HALLMARK
+  mutate(pathway = gsub("HALLMARK_","", pathway),
+         pathway = gsub("_"," ", pathway)) %>% 
+  
+ggplot(aes(x=reorder(pathway, NES), #Reorder gene sets by NES values
+           y=NES)) +
+  geom_col() +
+  theme_classic() +
+  #Force equal max min
+  lims(y=c(-3.2,3.2)) +
+  #Some more customization to pretty it up
+  #Flip x and y so long labels can be read
+  coord_flip() +
+  #fix labels
+  labs(x="Normalized enrichment score (NES)",
+       y="Gene set",
+       title = "Hallmark GSEA (FDR < 0.05)\nDown in +Mtb <--         --> Up in +Mtb")
+```
+
+You'll see that GSEA identifies all the same Hallmark gene sets as simple enrichment (except MTORC1 SIGNALING) plus a bunch more. This is because we did not subset to just the *most* significant genes. We are able to see more when including fold change of all genes available.
+
+We can also label GSEA as up/down expression because we know that we calculated fold change as TB - MEDIA. Thus, positive enrichment corresponds to higher expression in TB.
+
+So why does MTORC1 SIGNALING show up in enrichment but not GSEA? This is because there are many genes in this gene set that change with Mtb infection but they are not concordant. We see that some MTORC1 genes have positive while others have negative mean fold change. In contrast, TNFA signaling (which was significant in both enrichment and GSEA) has mostly genes with positive fold change. Thus, MTORC GSEA is closer to zero and not significant, while TNFA signaling GSEA is positive and significant.
+
+```{r fig.width=5.5, echo=FALSE, message=FALSE}
+#Get genes in gene sets of interest
+gs.temp <- H.ensembl %>% 
+  filter(gs_name %in% c("HALLMARK_TNFA_SIGNALING_VIA_NFKB",
+                        "HALLMARK_MTORC1_SIGNALING")) %>% 
+  #Beautify descriptions by removing _ and HALLMARK
+  mutate(gs_name = gsub("HALLMARK_","", gs_name),
+         gs_name = gsub("_"," ", gs_name))
+
+expression.temp <- as.data.frame(dat$E) %>% 
+  #Move gene IDs from rownames to a column
+  rownames_to_column("ensembl_gene") %>% 
+  #Filter genes in gs of interest
+  inner_join(gs.temp) %>% 
+  #Make long format with all expression values in 1 column
+  pivot_longer(-c(ensembl_gene, gs_name), 
+               names_to = "libID", values_to = "expression") %>% 
+  #Extract RSID and TB condition from libID
+  separate(libID, into = c("RSID","condition"), sep="_") %>% 
+  #Make wide with media and tb expression in separate columns
+  pivot_wider(names_from = condition, values_from = expression) %>% 
+  #Calculate tb minus media fold change (delta for change)
+  #Because expression values are log2, subtraction is the same as division
+  mutate(delta = TB-MEDIA) %>% 
+  #mean fold change
+  group_by(ensembl_gene, gs_name) %>% 
+  summarise(mean=mean(delta, na.rm=TRUE)) %>% 
+  #color group for significance
+  mutate(col.group = ifelse(ensembl_gene %in% signif$ensembl_gene_id,
+                            "FDR < 1E-16", "FDR > 1E-16")) %>% 
+  arrange(desc(col.group))
+
+expression.temp  %>% 
+ggplot(aes(x=gs_name, y=mean)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(aes(color=col.group), width=0.2, height=0, alpha=0.5) +
+  labs(x="", y="Mean log2 TB - MEDIA\nexpression fold change",
+       color="Gene linear model") +
+  theme_classic() +
+  #add 0 mark line
+  geom_hline(yintercept = 0, color="red") +
+  #recolor
+  scale_color_manual(values=c("orange","blue"))
+```
+
+## Exercises
+
+1. Run GSEA against the canonical pathways `C2.CP` database. Do the most enriched gene sets correspond to any significant Hallmark GSEA? 
+1. Further modify the final GSEA ggplot for `C2.CP`. How would you improve readability with so many significant gene sets? Hint: could facets help?
 
 # Additional resources
-## Groups
+### Groups
 
 * [Rladies Seattle](https://www.meetup.com/rladies-seattle/) Not just for ladies! A pro-actively inclusive R community with both in-person and online workshops, hangouts, etc.
 * [TidyTuesday](https://github.com/rfordatascience/tidytuesday) A weekly plotting challenge
 * [R code club](https://www.riffomonas.org/code_club/) Dr. Pat Schloss opened his lab's coding club to remote participation. 
 * [Seattle useR Group](https://www.meetup.com/Seattle-useR/)
 
-## Online
+### Online
 
 * [R cheatsheets](https://www.rstudio.com/resources/cheatsheets/) also available in RStudio under Help > Cheatsheets
 * [The Carpentries](https://carpentries.org/)
+* [topGO](https://bioconductor.org/packages/release/bioc/vignettes/topGO/inst/doc/topGO.pdf) Another R package for running enrichment of gene ontology gene sets
 
 # R session
 

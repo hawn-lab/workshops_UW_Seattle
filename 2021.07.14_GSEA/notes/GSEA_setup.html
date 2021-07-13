@@ -191,14 +191,14 @@ pre code {
 <h2>Packages</h2>
 <p>Automatically install only new packages with the following.</p>
 <pre class="r"><code>#CRAN packages
-pcks &lt;- c(&quot;tidyverse&quot;, &quot;msigdbr&quot;, &quot;fgsea&quot;, &quot;BiocManager&quot;, &quot;org.Hs.eg.db&quot;)
+pcks &lt;- c(&quot;tidyverse&quot;, &quot;msigdbr&quot;, &quot;fgsea&quot;, &quot;BiocManager&quot;)
 
 to.install &lt;- pcks[!(pcks %in% installed.packages()[,&quot;Package&quot;])]
 
 if(length(to.install)) install.packages(to.install)
 
 #Bioconductor packages
-pcks &lt;- c(&quot;org.Hs.eg.db&quot;)
+pcks &lt;- c(&quot;clusterProfiler&quot;)
 
 to.install &lt;- pcks[!(pcks %in% installed.packages()[,&quot;Package&quot;])]
 

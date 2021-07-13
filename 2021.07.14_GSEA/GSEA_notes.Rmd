@@ -3,12 +3,12 @@ title: "Gene set enrichment analysis"
 author: "Kim Dill-McFarland, <kadm@uw.edu>"
 date: "version `r format(Sys.time(), '%B %d, %Y')`"
 output:
+  pdf_document:
+    toc: yes
   html_document:
     toc: yes
     toc_float:
       collapsed: no
-  pdf_document:
-    toc: yes
 editor_options:
   chunk_output_type: console
 ---
@@ -27,7 +27,7 @@ During the workshop, we will build an R script together, which will be posted as
 
 # Prior to the workshop
 
-Please [install R](http://www.r-project.org), [RStudio](https://www.rstudio.com/products/rstudio/download/), and the following packages. See the [setup instructions](notes/introR_setup.html) for more details.
+Please install [R](http://www.r-project.org), [RStudio](https://www.rstudio.com/products/rstudio/download/), and the following packages. See the [setup instructions](notes/introR_setup.html) for more details.
 
 ```{r message=FALSE, warning=FALSE}
 #Data manipulation
@@ -42,22 +42,31 @@ library(fgsea)
 
 # Load data
 
+Briefly, these data are from RNA-sequencing of human monocytes alone (`MEDIA`) or infected with *M. tuberculosis* in vitro (`TB`). Expression data are in an EList object containing expression (`E`), sample/patient metadata (`targets`), and gene metadata (`genes`).
+
 ```{r}
 #RNAseq expression data
 load("data/RSTR_data_clean_subset.RData")
+class(dat)
+names(dat)
+```
+
+Additionally we have the results of a linear mixed effect model for each gene in the expression data. For this workshop, these data a filtered to just the TB-MEDIA variable. 
+
+```{r}
 #Linear model results
-model.results <- read_csv("data/RSTR.Mtb.model.results.anno.csv") %>% 
-  #Filter results for Mtb vs media condition
-  filter(variable == "conditionTB")
+model.results <- read_csv("data/RSTR.Mtb.model.subset.csv")
+class(model.results)
+head(model.results)
 ```
 
 # Gene sets
 
-Definition: two or more genes with shared function, structure, localization, or any other defined grouping variable
+Definition: two or more genes with shared function, structure, localization, or any other defining similarity
 
 Use: glean interpretable, biologically-relevant meaning from a list of genes of interest
 
-Gene sets can be as general as "cytosolic" to as specific as "up-regulated in blood vessel cells in response to wound in *Roy et al 2007*". They can be defined by an individual research study (as in the latter) up to generally agreed upon knowledge formed from an entire body of literature (like the former). They also vary in size (2 to thousands), are not exclusive (one gene is in many gene sets), and many are redundant (transmembrane, membrane, lipid bilayer...).
+Gene sets can be as general as "cytosolic" to as specific as "up-regulated in blood vessel cells in response to wound in *Roy et al 2007*". They can be defined by an individual research study (like the latter) up to generally agreed upon knowledge formed from an entire body of literature (like the former). They also vary in size (2 to thousands), are not exclusive (one gene is in many gene sets), and many are redundant (transmembrane, membrane, lipid bilayer...).
 
 It is up to you, the researcher, to select what group of gene sets you want to test. More on this below. Keep in mind, this is definitely not a case for "more is better". For example, getting 200 significant gene sets from your 250 significant genes does not help you much.
 
@@ -79,44 +88,35 @@ The Broad Institute has collated many useful gene sets in their Molecular Signat
 
 Hallmark is the most general group and is usually where we start our analyses. It helps reduce the complexity of a large gene list down to easily understood terms. It also provides some context when looking at more specific gene sets as you can often group the other sets under a more general Hallmark term. However, because Hallmark is the most general, it is also the most incomplete with 50 gene sets representing just under 4400 genes.
 
-Curated and gene ontology sets are more specific than Hallmark, though they contain a range of levels. They are particularly useful in adding details to a Hallmark term or defining testable hypotheses for follow-up experiments in the lab. They contain a lot more genes than Hallmark but many sets are redundant or overlapping. If there are many significant Hallmark terms, we often do not run these more specific sets as it gives too many significant results for interpretation. 
+Curated and gene ontology sets are more specific than Hallmark, though they contain sets with a range of specificities. They are particularly useful in adding details to a Hallmark term or defining testable hypotheses for follow-up experiments in the lab. They contain a lot more genes than Hallmark but many sets are redundant or overlapping. If there are many significant Hallmark terms, we often do not run these more specific sets as it gives too many results for interpretation. In contrast, when there are few significant Hallmark terms, these more granular gene sets may provide better insight.
 
-There are several other sets in MSigDB that are not described here. Some of these are too specific to be of use in our global RNA-sequencing analyses (C2 chemical and genetic perturbations or C7 immunologic signatures) while other covers areas not relevant to our experimental design (C1 chromosome position, C3 gene regulation, C4/C6 cancer-oriented). 
+There are several other sets in MSigDB that are not described here. Some of these are too specific (individual studies) to be of use in our analyses (C2 chemical and genetic perturbations or C7 immunologic signatures) while others cover areas not relevant to our experimental design (C1 chromosome position, C3 gene regulation, C4/C6 cancer-oriented). There are still more gene sets that are not included in MSigDB, though this database is a pretty comprehensive place to start.
+
+In reality, we usually run all of Hallmark, canonical pathways, and biological process. Then, we consider how many significant gene sets each gives us, think further about the top hits, and perform additional analyses or experiments to see which will be highlighted in publication.
 
 Next we will use gene sets to unravel how monocytes respond to *M. tuberculosis* infection.
 
 # Hypergeometric enrichment
 
-This analysis is a simple enrichment. We ask if our list of significant genes is enriched in gene sets more than random chance would allow.
+This analysis is a simple enrichment. We ask if our list of significant genes is enriched in gene sets more than random chance allows.
 
 ### Get gene set data
 
-First, we extract the lists of genes in Broad terms from the package `msigdbr`. We format them as a data frames so we can use the `tidyverse`.
+First, we extract the lists of genes in Broad Hallmark terms from the package `msigdbr`. We format it as a data frame so we can use the `tidyverse`.
 
 ```{r}
 #Hallmark
 H <- as.data.frame(msigdbr(species = "Homo sapiens", 
                            category = "H"))
-#Canonical pathways
-#Note that we have to call each database and combine them together
-C2.CP <- as.data.frame(msigdbr(species = "Homo sapiens", 
-                               category = "C2",
-                               subcategory = "CP:BIOCARTA")) %>% 
-        bind_rows(as.data.frame(msigdbr(species = "Homo sapiens", 
-                                category = "C2",
-                                subcategory = "CP:KEGG"))) %>% 
-        bind_rows(as.data.frame(msigdbr(species = "Homo sapiens", 
-                                category = "C2",
-                                subcategory = "CP:PID"))) %>% 
-        bind_rows(as.data.frame(msigdbr(species = "Homo sapiens", 
-                                category = "C2",
-                                subcategory = "CP:REACTOME")))
-#Gene ontology biological process
-C5.BP <- as.data.frame(msigdbr(species = "Homo sapiens", 
-                               category = "C5", subcategory = "GO:BP"))
 ```
 
-Here, we see the start of the Hallmark data.
+Here, we see the start of the Hallmark data including
+
+* gs_cat: gene set category, in this case H for Hallmark
+* gs_name: short gene set name
+* gene_symbol: HGNC symbol for each each in the gene set
+* gs_description: sentence describing the gene set name further
+* additional variables: other gene identifiers like ENSEMBL, ENTREZ, etc
 
 ```{r}
 head(H)
@@ -142,7 +142,7 @@ table(model.results$FDR == 0)
 
 These zeroes are actually a result of limitations in our linear modeling function. After a certain point (in this case, 1E-16), the function stops computing and saves the P-value as zero to save time. 
 
-Here, we will use FDR < 1E-16 to see the genes that change the most with Mtb infection. *This is not necessarily what I'd recommend for these data*. It just for workshop purposes.
+Here, we will use FDR < 1E-16 to see the genes that change the most with Mtb infection. *This is not necessarily what I'd recommend for these data*. It's just for workshop purposes.
 
 ```{r}
 signif <- model.results %>% 
@@ -153,10 +153,10 @@ signif <- model.results %>%
 
 Now we can run the enrichment in `clusterProfiler`. We can use any gene ID in our dataset; it just has to match the gene IDs in the database.
 
-Here, we run the enrichment using ENTREZ ID and the Hallmark database. Note that you must select ONLY the columns needed from the Hallmark database. `enricher( )` isn't smart enough to know which columns to use on its own.
+Here, we run the enrichment using ENTREZ ID. Note that you must select ONLY the columns needed from the Hallmark database. `enricher( )` isn't smart enough to know which columns to use on its own.
 
 ```{r}
-#Select unique ENSEMBL IDs for significant genes
+#Select unique EMTREZ IDs for significant genes
 signif.entrez <- unique(signif$entrezgene_id)
 #Select matching ID column in database
 H.entrez <- select(H, gs_name, entrez_gene)
@@ -192,8 +192,8 @@ class(enrich.H)
 
 We briefly mentioned this data type in intro R. It works very similarly to S3 (like the expression data) except you use `@` to extract data. For example, the enrichment results are in a data frame.
 
-```{r}
-head(enrich.H@result)
+```{r eval=FALSE}
+enrich.H@result
 ```
 
 This includes
@@ -236,7 +236,7 @@ enrich.H.df <- enrich.H@result %>%
 
 ### Visualize significant enrichment
 
-The most common visualization for enrichment is k/K as it is the ratio of significant genes relative to total genes in the gene set. We also subset to significant enrichment at an defined FDR. Here, let's use FDR < 0.05. This is actually pretty strict of enrichment and people often go up to FDR < 0.2.
+The most common visualization for enrichment is k/K as it is the ratio of significant genes relative to total genes in the gene set. We also subset to significant enrichment at a defined FDR. Here, let's use FDR < 0.05. This is actually pretty strict for enrichment and people often go up to FDR < 0.2.
 
 ```{r}
 enrich.H.df %>% 
@@ -258,7 +258,29 @@ ggplot(aes(x=reorder(Description, k.K), #Reorder gene sets by k/K values
        title = "Mtb significant genes (FDR < 1E-16)\nenriched in Hallmark gene sets (FDR < 0.05)")
 ```
 
-## Enrichment exercises
+## Exercises
+
+Here's some helpful code to extract the other gene sets of interest.
+
+```{r eval=FALSE}
+#Canonical pathways
+#Note that we have to call each database and combine them together
+C2.CP <- as.data.frame(msigdbr(species = "Homo sapiens", 
+                               category = "C2",
+                               subcategory = "CP:BIOCARTA")) %>% 
+        bind_rows(as.data.frame(msigdbr(species = "Homo sapiens", 
+                                category = "C2",
+                                subcategory = "CP:KEGG"))) %>% 
+        bind_rows(as.data.frame(msigdbr(species = "Homo sapiens", 
+                                category = "C2",
+                                subcategory = "CP:PID"))) %>% 
+        bind_rows(as.data.frame(msigdbr(species = "Homo sapiens", 
+                                category = "C2",
+                                subcategory = "CP:REACTOME")))
+#Gene ontology biological process
+C5.BP <- as.data.frame(msigdbr(species = "Homo sapiens", 
+                               category = "C5", subcategory = "GO:BP"))
+```
 
 1. Run enrichment of the current significant gene list against the canonical pathways `C2.CP` database. Do you get more or fewer significant gene sets? Is this what you'd expect give what you know about C2?
 1. Run Hallmark enrichment on genes significant at FDR < 0.01. Do you get more or fewer significant gene sets? Why might this be the case?

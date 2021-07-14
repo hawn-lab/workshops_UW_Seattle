@@ -266,8 +266,8 @@ ggplot(aes(x=reorder(Description, k.K), #Reorder gene sets by k/K values
   #Flip x and y so long labels can be read
   coord_flip() +
   #fix labels
-  labs(x="Significant genes in set / Total genes in set \nk/K",
-       y="Gene set",
+  labs(y="Significant genes in set / Total genes in set \nk/K",
+       x="Gene set",
        title = "Mtb significant genes (FDR < 1E-16)\nenriched in Hallmark gene sets (FDR < 0.05)")
 ```
 
@@ -474,8 +474,8 @@ ggplot(aes(x=reorder(pathway, NES), #Reorder gene sets by NES values
   #Flip x and y so long labels can be read
   coord_flip() +
   #fix labels
-  labs(x="Normalized enrichment score (NES)",
-       y="Gene set",
+  labs(y="Normalized enrichment score (NES)",
+       x="Gene set",
        title = "Hallmark GSEA (FDR < 0.05)\nDown in +Mtb <--         --> Up in +Mtb")
 ```
 
